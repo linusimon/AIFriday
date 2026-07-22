@@ -1,0 +1,25 @@
+Al Friday Season 2 - Problem Statements
+
+Information Chunking and Comprehension Checking in Voice Assistants
+
+PROBLEM STATEMENT
+
+Voice assistants often overwhelm users by delivering too much information at once, making it difficult to follow. For example, Shreya receives a lengthy insurance policy explanation without pauses, causing confusion and disengagement. This overload impairs comprehension and limits effective decision-making. Current systems typically provide unsegmented, continuous speech responses lacking adaptive chunking or comprehension checks. The business impact includes reduced user satisfaction, increased support queries, and lost sales opportunities. Al that breaks responses into manageable segments and verifies user understanding can enhance interaction quality and outcomes.
+
+Data Considerations:
+
+Cognitive load datasets; conversational chunking and summarization data; comprehension feedback datasets; dialogue summarization corpora; user preference datasets; volume sufficient to train adaptive chunking models; preprocessing for text segmentation and semantic coherence; privacy compliance maintained; synthetic dialogue chunking data recommended.
+
+Consider using synthetic or anonymized data where appropriate. Ensure data quality and relevance to the problem context.
+
+SOLUTION EXPECTATIONS
+
+A voice assistant application delivering information in manageable chunks with comprehension prompts; Ul controls for pacing, replay, skip, summarize, and confirmation; backend integration with information service APIs; evaluation using comprehension success, task completion rate, reduced clarification turns, lower abandonment, and user effort reduction; documentation mapping the solution to PAS 901 principles including cognitive accessibility, confirmation and clarity, user control, discoverability, flexible input, and adaptive interaction; demo highlighting chunked delivery. memory assistance, simplified explanations, and comprehension validation.
+
+Accessibility Impact: Benefits users with cognitive, memory, attention, or processing challenges by reducing information overioad. Expected outcome: users can understand complex information in smaller steps and make decisions with greater confidence.
+
+Feel free to explore creative solutions that align with the problem context and objectives.
+
+TCS Internal
+
+16 July 2026
