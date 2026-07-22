@@ -1,0 +1,48 @@
+/* Global styles for Capital Markets Risk Summarizer */
+:root {
+  --bg-dark: #020617;
+  --bg-slate: #0b0f19;
+  --card-glass: rgba(15, 23, 42, 0.65);
+  --border-glass: rgba(255, 255, 255, 0.08);
+
+  --indigo: #6366f1;
+  --mint: #10b981;
+  --amber: #f59e0b;
+  --crimson: #ef4444;
+  --cyan: #06b6d4;
+  --text-light: #000000;
+  --text-muted: #94a3b8;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}

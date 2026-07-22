@@ -1,0 +1,228 @@
+<div class="analysis-container">
+  <div class="analysis-header">
+    <h1>Intelligent Task Routing Analysis</h1>
+    <p class="subtitle">Upload your project document to get AI-powered task assignments and resource recommendations</p>
+  </div>
+
+  <!-- Input Mode Toggle -->
+  <div class="mode-toggle">
+    <button 
+      [class.active]="inputMode === 'file'" 
+      (click)="switchMode('file')"
+      class="mode-btn">
+      📄 Upload File
+    </button>
+    <button 
+      [class.active]="inputMode === 'text'" 
+      (click)="switchMode('text')"
+      class="mode-btn">
+      ✏️ Paste Text
+    </button>
+  </div>
+
+  <!-- File Upload Mode -->
+  <div *ngIf="!analysisResult && inputMode === 'file'" class="upload-section">
+    <div 
+      class="drop-zone"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event)"
+      [class.has-file]="selectedFile">
+      
+      <input 
+        type="file" 
+        id="fileInput" 
+        (change)="onFileSelected($event)"
+        accept=".pdf,.docx,.txt"
+        style="display: none">
+      
+      <div *ngIf="!selectedFile" class="drop-zone-content">
+        <div class="upload-icon">📤</div>
+        <p class="drop-text">Drag and drop your project document here</p>
+        <p class="or-text">or</p>
+        <label for="fileInput" class="upload-btn">Browse Files</label>
+        <p class="file-types">Supported: PDF, DOCX, TXT (max 10MB)</p>
+      </div>
+
+      <div *ngIf="selectedFile" class="file-info">
+        <div class="file-icon">📄</div>
+        <div class="file-details">
+          <p class="file-name">{{ selectedFile.name }}</p>
+          <p class="file-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</p>
+        </div>
+        <button class="remove-btn" (click)="reset()">✕</button>
+      </div>
+    </div>
+
+    <button 
+      class="analyze-btn"
+      [disabled]="!selectedFile || analyzing"
+      (click)="analyzeDocument()">
+      {{ analyzing ? '⏳ Analyzing...' : '🚀 Analyze Document' }}
+    </button>
+  </div>
+
+  <!-- Text Input Mode -->
+  <div *ngIf="!analysisResult && inputMode === 'text'" class="text-input-section">
+    <textarea 
+      [(ngModel)]="documentText"
+      placeholder="Paste your project requirements, task descriptions, and constraints here...
+
+Example:
+PROJECT: E-Commerce Platform Modernization
+
+Requirements:
+1. Frontend Redesign
+   - Modernize UI using React or Angular
+   - Implement responsive design
+   Skills: React, TypeScript, CSS
+   Priority: High
+   Estimated Effort: 120 hours
+
+2. Backend API Refactoring
+   - Migrate to microservices
+   - RESTful APIs for catalog, orders
+   Skills: Python, Flask, Microservices
+   Priority: Critical
+   Estimated Effort: 160 hours
+..."
+      rows="20"
+      class="text-input"></textarea>
+
+    <button 
+      class="analyze-btn"
+      [disabled]="!documentText.trim() || analyzing"
+      (click)="analyzeDocument()">
+      {{ analyzing ? '⏳ Analyzing...' : '🚀 Analyze Text' }}
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="analyzing" class="loading-state">
+    <div class="spinner"></div>
+    <h3>Analyzing Your Document...</h3>
+    <div class="progress-steps">
+      <div class="step">✓ Extracting tasks and requirements</div>
+      <div class="step">✓ Matching skills and resources</div>
+      <div class="step">⏳ Optimizing costs and workload</div>
+      <div class="step">⏳ Assessing risks and SLA</div>
+      <div class="step">⏳ Generating recommendations</div>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="error-message">
+    <div class="error-icon">⚠️</div>
+    <p>{{ error }}</p>
+    <button class="retry-btn" (click)="reset()">Try Again</button>
+  </div>
+
+  <!-- Analysis Results -->
+  <div *ngIf="analysisResult" class="results-section">
+    <div class="results-header">
+      <h2>✅ Analysis Complete</h2>
+      <button class="new-analysis-btn" (click)="reset()">New Analysis</button>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="overview-cards">
+      <div class="card">
+        <div class="card-icon">📋</div>
+        <div class="card-content">
+          <div class="card-value">{{ analysisResult.report.analysis_overview.total_tasks }}</div>
+          <div class="card-label">Tasks Analyzed</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <div class="card-content">
+          <div class="card-value">{{ analysisResult.report.analysis_overview.human_assignments }}</div>
+          <div class="card-label">Human Resources</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🤖</div>
+        <div class="card-content">
+          <div class="card-value">{{ analysisResult.report.analysis_overview.ai_assignments }}</div>
+          <div class="card-label">AI Agents</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon">💰</div>
+        <div class="card-content">
+          <div class="card-value">${{ analysisResult.report.analysis_overview.total_estimated_cost.toFixed(0) }}</div>
+          <div class="card-label">Estimated Cost</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⏱️</div>
+        <div class="card-content">
+          <div class="card-value">{{ analysisResult.report.analysis_overview.total_estimated_effort }}</div>
+          <div class="card-label">Total Hours</div>
+        </div>
+      </div>
+      <div class="card" [class.risk-high]="analysisResult.report.analysis_overview.high_risk_tasks > 0">
+        <div class="card-icon">⚠️</div>
+        <div class="card-content">
+          <div class="card-value">{{ analysisResult.report.analysis_overview.high_risk_tasks }}</div>
+          <div class="card-label">High Risk Tasks</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="summary-section">
+      <h3>📊 Executive Summary</h3>
+      <div class="summary-text" [innerHTML]="analysisResult.report.executive_summary | nl2br"></div>
+    </div>
+
+    <!-- Task Assignments -->
+    <div class="assignments-section" *ngIf="analysisResult.report.task_assignments.length > 0">
+      <h3>📝 Task Assignments</h3>
+      <div class="assignments-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Task</th>
+              <th>Complexity</th>
+              <th>Recommended Resource</th>
+              <th>Type</th>
+              <th>Cost</th>
+              <th>Risk</th>
+              <th>Confidence</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let assignment of analysisResult.report.task_assignments">
+              <td>
+                <strong>{{ assignment.task_name }}</strong>
+                <br><small>{{ assignment.task_description | slice:0:100 }}...</small>
+              </td>
+              <td><span class="badge" [class.badge-high]="assignment.complexity === 'High'">{{ assignment.complexity }}</span></td>
+              <td>{{ assignment.recommended_resource.name }}</td>
+              <td><span class="badge badge-type">{{ assignment.recommended_resource.type }}</span></td>
+              <td>${{ assignment.cost_analysis.recommended_cost.toFixed(0) }}</td>
+              <td><span class="badge" [class.badge-risk]="assignment.risk_assessment.risk_level === 'High'">{{ assignment.risk_assessment.risk_level }}</span></td>
+              <td>{{ assignment.recommended_resource.confidence_score }}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="recommendations-section" *ngIf="analysisResult.report.detailed_recommendations.length > 0">
+      <h3>💡 Detailed Recommendations</h3>
+      <ul class="recommendations-list">
+        <li *ngFor="let rec of analysisResult.report.detailed_recommendations">{{ rec }}</li>
+      </ul>
+    </div>
+
+    <!-- Next Steps -->
+    <div class="next-steps-section">
+      <h3>🎯 Next Steps</h3>
+      <ol class="next-steps-list">
+        <li *ngFor="let step of analysisResult.report.next_steps">{{ step }}</li>
+      </ol>
+    </div>
+  </div>
+</div>

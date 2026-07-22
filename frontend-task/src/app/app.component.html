@@ -1,0 +1,31 @@
+<div class="app-container">
+  <!-- Navigation Header -->
+  <header class="app-header" *ngIf="authService.isAuthenticated()">
+    <div class="header-left">
+      <h1 class="app-title">🎯 Intelligent Task Routing</h1>
+    </div>
+    
+    <nav class="main-nav">
+      <a routerLink="/analysis" routerLinkActive="active" class="nav-link">
+        📊 Analysis
+      </a>
+      <a routerLink="/chat" routerLinkActive="active" class="nav-link">
+        💬 Chat Assistant
+      </a>
+      <a routerLink="/admin" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
+        ⚙️ Admin
+      </a>
+    </nav>
+
+    <div class="header-right">
+      <button class="logout-btn" (click)="logout()">
+        🚪 Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="app-main">
+    <router-outlet></router-outlet>
+  </main>
+</div>

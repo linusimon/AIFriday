@@ -1,0 +1,140 @@
+<div class="admin-container">
+  <!-- Header -->
+  <div class="admin-header">
+    <h1>📊 Admin Dashboard</h1>
+    <div class="header-actions">
+      <button class="btn-secondary" (click)="goHome()">Portfolio Analyzer</button>
+      <button class="btn-logout" (click)="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button 
+      [class.active]="activeTab === 'rag'" 
+      (click)="activeTab = 'rag'"
+    >
+      RAG Document Management
+    </button>
+    <button 
+      [class.active]="activeTab === 'expert'" 
+      (click)="activeTab = 'expert'"
+    >
+      Expert Analysis Management
+    </button>
+  </div>
+
+  <!-- RAG Management Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'rag'">
+    <div class="section">
+      <h2>RAG Vector Store Statistics</h2>
+      <div class="stats-grid" *ngIf="ragStats">
+        <div class="stat-card">
+          <div class="stat-value">{{ ragStats.total_chunks }}</div>
+          <div class="stat-label">Total Chunks</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ ragStats.total_documents }}</div>
+          <div class="stat-label">Total Documents</div>
+        </div>
+      </div>
+
+      <div class="documents-list" *ngIf="ragStats && ragStats.documents.length > 0">
+        <h3>Indexed Documents</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Chunks</th>
+              <th>Upload Date</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let doc of ragStats.documents">
+              <td>{{ doc.filename }}</td>
+              <td>{{ doc.chunks }}</td>
+              <td>{{ doc.upload_date }}</td>
+              <td>{{ doc.file_type }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Upload New Document to RAG</h2>
+      <div class="upload-form">
+        <input 
+          #ragFileInput
+          type="file" 
+          (change)="onFileSelected($event)"
+          accept=".pdf,.csv,.json,.xml"
+          [disabled]="isUploading"
+        />
+        <p *ngIf="selectedFile" class="file-info">Selected: {{ selectedFile.name }}</p>
+        <button 
+          class="btn-primary" 
+          (click)="uploadDocument()"
+          [disabled]="!selectedFile || isUploading"
+        >
+          {{ isUploading ? 'Uploading...' : 'Upload Document' }}
+        </button>
+        <button 
+          class="btn-secondary" 
+          (click)="reloadNews()"
+        >
+          Reload Market News
+        </button>
+      </div>
+      <div class="message" *ngIf="uploadMessage" [class.error]="uploadMessage.startsWith('✗')">
+        {{ uploadMessage }}
+      </div>
+      <p class="hint">Supported formats: PDF, CSV, JSON, XML</p>
+    </div>
+  </div>
+
+  <!-- Expert Analysis Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'expert'">
+    <div class="section">
+      <h2>Add Expert Analysis</h2>
+      <div class="expert-form">
+        <input 
+          type="text" 
+          [(ngModel)]="newAnalysis.key"
+          placeholder="Ticker Symbol (e.g., AAPL)"
+          class="form-input"
+        />
+        <textarea 
+          [(ngModel)]="newAnalysis.data"
+          placeholder="Expert analysis text..."
+          rows="6"
+          class="form-textarea"
+        ></textarea>
+        <button class="btn-primary" (click)="addExpertAnalysis()">
+          Add Expert Analysis
+        </button>
+      </div>
+      <div class="message" *ngIf="expertMessage" [class.error]="expertMessage.startsWith('✗')">
+        {{ expertMessage }}
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Expert Analysis Database</h2>
+      <div class="loading" *ngIf="isLoadingExperts">Loading...</div>
+      <div class="expert-list" *ngIf="!isLoadingExperts">
+        <div class="expert-item" *ngFor="let analysis of expertAnalyses">
+          <div class="expert-header">
+            <span class="expert-key">{{ analysis.key }}</span>
+            <button class="btn-delete" (click)="deleteExpertAnalysis(analysis.id)">Delete</button>
+          </div>
+          <div class="expert-data">{{ analysis.data }}</div>
+          <div class="expert-meta">
+            Added: {{ analysis.created_at | date:'short' }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,81 @@
+<div class="chat-container">
+  <div class="chat-header">
+    <div class="header-content">
+      <h2>🤖 AI Chat Assistant</h2>
+      <p class="subtitle">Ask questions about task routing and resource assignments</p>
+    </div>
+    <button class="clear-btn" (click)="clearChat()" *ngIf="messages.length > 0">
+      🔄 New Chat
+    </button>
+  </div>
+
+  <div class="error-banner" *ngIf="error">
+    ⚠️ {{ error }}
+  </div>
+
+  <div class="messages-container">
+    <div *ngFor="let message of messages" 
+         class="message" 
+         [class.user-message]="message.role === 'user'"
+         [class.assistant-message]="message.role === 'assistant'">
+      
+      <div class="message-avatar">
+        {{ message.role === 'user' ? '👤' : '🤖' }}
+      </div>
+      
+      <div class="message-content">
+        <div class="message-header">
+          <span class="message-role">{{ message.role === 'user' ? 'You' : 'AI Assistant' }}</span>
+          <span class="message-time">{{ message.timestamp | date:'short' }}</span>
+        </div>
+        <div class="message-text">{{ message.content }}</div>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="message assistant-message">
+      <div class="message-avatar">🤖</div>
+      <div class="message-content">
+        <div class="typing-indicator">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-container">
+    <textarea 
+      [(ngModel)]="userMessage"
+      (keypress)="onKeyPress($event)"
+      placeholder="Type your question here... (Press Enter to send, Shift+Enter for new line)"
+      rows="3"
+      class="message-input"
+      [disabled]="loading || !sessionId"></textarea>
+    
+    <button 
+      class="send-btn"
+      (click)="sendMessage()"
+      [disabled]="!userMessage.trim() || loading || !sessionId">
+      {{ loading ? '⏳' : '📤' }} Send
+    </button>
+  </div>
+
+  <div class="quick-questions">
+    <p class="quick-label">Quick Questions:</p>
+    <div class="quick-btns">
+      <button class="quick-btn" (click)="userMessage = 'Why was this resource recommended?'; sendMessage()">
+        Why this resource?
+      </button>
+      <button class="quick-btn" (click)="userMessage = 'What are the alternative options?'; sendMessage()">
+        Show alternatives
+      </button>
+      <button class="quick-btn" (click)="userMessage = 'What are the risks?'; sendMessage()">
+        Risk assessment
+      </button>
+      <button class="quick-btn" (click)="userMessage = 'How can we optimize costs?'; sendMessage()">
+        Cost optimization
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,37 @@
+=========================================
+CORPORATE RESOURCE ROUTING & ASSIGNMENT POLICY
+Version: 2.1 (2026)
+Classification: Internal Use Only
+=========================================
+
+1. CRITICAL TASK ASSIGNMENT DIRECTIVE
+-------------------------------------
+* POLICY-101: All tasks designated with a priority of "Critical" must be assigned to Senior human resources with a minimum of 8 years of relevant experience.
+* POLICY-102: Under no circumstances should a Critical priority task be fully routed to an AI Agent without human oversight. An AI Agent may only be assigned as an alternative or supportive developer (co-pilot).
+* POLICY-103: Daniel Martinez is the primary lead for all "Security Audit and Compliance" tasks. If Daniel Martinez has a workload exceeding 80 hours, James Brown must be assigned as the secondary lead.
+
+2. FRONTEND DEVELOPMENT ROLES & CERTIFICATIONS
+----------------------------------------------
+* POLICY-201: High-complexity Frontend Redesign tasks require developers with proven skills in React, TypeScript, and UX Design.
+* POLICY-202: Sarah Johnson is the designated lead for React and AWS-integrated frontend architectures.
+* POLICY-203: Lisa Anderson is the designated lead for Angular and design system UI/UX compliance.
+
+3. MOBILE APPLICATION PROJECTS
+------------------------------
+* POLICY-301: Native iOS and Android mobile development tasks (Swift and Kotlin) must prioritize Joshua Walker.
+* POLICY-302: For workload overflow (Joshua Walker workload > 80 hours), mobile app tasks must be split or outsourced to a specialized mobile development team.
+
+4. DATABASE SECURITY & OPTIMIZATION STANDARDS
+---------------------------------------------
+* POLICY-401: All database migrations from MySQL to PostgreSQL must be overseen by Christopher Lee.
+* POLICY-402: Query performance tuning and database sharding tasks require a minimum performance score of 90 for the assigned resource.
+
+5. QUALITY ASSURANCE & PERFORMANCE TESTING
+------------------------------------------
+* POLICY-501: Load testing tasks requiring simulation of more than 5,000 concurrent users must be routed to specialized performance QA teams or certified QA consultants.
+* POLICY-502: Automated test generation (e.g. Pytest, Selenium) should prioritize utilizing the AI Agent "TestGen AI" to optimize costs.
+
+6. BUDGET & COST LIMITATION RULES
+---------------------------------
+* POLICY-601: The maximum acceptable hourly rate for external security consultants is $100/hour.
+* POLICY-602: AI Agents should be utilized whenever possible for low and medium complexity tasks to maintain average task costs below $150.
