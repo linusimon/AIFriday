@@ -100,13 +100,69 @@ PROJECT: Enterprise Portal Refactoring
     </button>
   </div>
 
-  <!-- Loading State -->
-  <div *ngIf="analyzing" class="loading-card glass-panel">
-    <div class="pulse-loader">
-      <i class="fa-solid fa-brain"></i>
+  <!-- Real-Time Async Loading & Progress Dashboard -->
+  <div *ngIf="analyzing" class="progress-section glass-panel">
+    <div class="progress-header">
+      <div class="header-left">
+        <div class="pulse-loader small">
+          <i class="fa-solid fa-brain fa-spin"></i>
+        </div>
+        <div>
+          <h3 class="progress-title">AI Multi-Agent Pipeline Executing</h3>
+          <p class="progress-subtitle">Active Agent: <span class="active-agent-badge"><i class="fa-solid fa-bolt text-amber"></i> {{ currentAgent }}</span></p>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="step-indicator font-mono">Step {{ currentStep }} of {{ totalSteps }}</span>
+        <span class="percentage-badge">{{ progressPercent }}%</span>
+      </div>
     </div>
-    <h3>AI Multi-Agent System Processing</h3>
-    <p class="loading-subtitle">Extracting tasks, evaluating SLA, matching expert skills & optimizing resource cost models...</p>
+
+    <!-- Progress Bar -->
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" [style.width.%]="progressPercent"></div>
+    </div>
+
+    <!-- Initial Data / Extracted Tasks Async Preview Card -->
+    <div *ngIf="extractedTasksPreview && extractedTasksPreview.length > 0" class="initial-data-card glass-panel mt-4">
+      <div class="preview-header">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-emerald"></i>
+          <h4>Initial Document Analysis Result — Extracted Tasks Preview ({{ extractedTasksPreview.length }})</h4>
+        </div>
+        <span class="live-tag"><span class="pulse-dot-sm"></span> Live Data Fetched</span>
+      </div>
+      <p class="preview-sub">Phase 1 complete! RAG vector matching, SLA risk analysis, and cost optimization are running in parallel...</p>
+      
+      <div class="preview-task-grid">
+        <div *ngFor="let task of extractedTasksPreview" class="preview-task-item glass-panel-sm">
+          <div class="task-item-top">
+            <span class="preview-task-name">{{ task.task_name }}</span>
+            <span class="pill-badge" [class.pill-high]="task.complexity === 'High'">{{ task.complexity }}</span>
+          </div>
+          <p class="preview-task-desc">{{ task.description | slice:0:110 }}...</p>
+          <div class="task-item-footer">
+            <span class="preview-skills"><i class="fa-solid fa-code"></i> {{ task.skills_required }}</span>
+            <span class="preview-effort"><i class="fa-solid fa-clock"></i> {{ task.estimated_effort }}h</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-time Agent Log Stream -->
+    <div class="agent-logs-container mt-4" *ngIf="agentLogs.length > 0">
+      <div class="logs-header">
+        <i class="fa-solid fa-terminal text-cyan"></i>
+        <span>Live Multi-Agent Event Stream</span>
+      </div>
+      <div class="logs-list">
+        <div *ngFor="let log of agentLogs" class="log-item" [class.log-complete]="log.status === 'completed'">
+          <span class="log-time">{{ log.timestamp }}</span>
+          <span class="log-agent">{{ log.agent }}</span>
+          <span class="log-msg">{{ log.message }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Error State -->

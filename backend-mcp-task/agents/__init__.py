@@ -31,13 +31,13 @@ class Agent:
         """
         raise NotImplementedError("Subclasses must implement execute()")
     
-    def call_llm(self, system_prompt: str, user_message: str, temperature: float = 0.7, response_format: Optional[str] = None) -> str:
+    def call_llm(self, system_prompt: str, user_message: Any, temperature: float = 0.7, response_format: Optional[str] = None) -> str:
         """
         Call TCS GenAI LLM
         
         Args:
             system_prompt: System prompt for the LLM
-            user_message: User message/query
+            user_message: User message/query string or multimodal content list
             temperature: Temperature for response generation
             response_format: Optional format specification (e.g., 'json')
         

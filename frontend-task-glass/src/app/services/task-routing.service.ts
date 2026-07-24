@@ -36,6 +36,56 @@ export class TaskRoutingService {
     });
   }
 
+  analyzeDocumentStream(file?: File, text?: string): Observable<any> {
+    return new Observable(observer => {
+      const formData = new FormData();
+      if (file) {
+        formData.append('file', file);
+      }
+      
+      const options: RequestInit = file 
+        ? { method: 'POST', body: formData }
+        : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ document_text: text }) };
+
+      fetch(`${this.apiUrl}/task-routing/analyze/stream`, options)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Server returned status ${response.status}`);
+          }
+          const reader = response.body?.getReader();
+          const decoder = new TextDecoder('utf-8');
+          let buffer = '';
+
+          function readChunk() {
+            reader?.read().then(({ done, value }) => {
+              if (done) {
+                observer.complete();
+                return;
+              }
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split('\n\n');
+              buffer = lines.pop() || '';
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(trimmed.slice(6));
+                    observer.next(data);
+                  } catch (e) {
+                    console.error('Failed to parse SSE data:', e);
+                  }
+                }
+              }
+              readChunk();
+            }).catch(err => observer.error(err));
+          }
+          readChunk();
+        })
+        .catch(err => observer.error(err));
+    });
+  }
+
   getAnalysisHistory(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/task-routing/history`);
   }
