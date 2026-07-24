@@ -170,6 +170,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
+  image?: string;
 }
 
 export interface ChatSession {

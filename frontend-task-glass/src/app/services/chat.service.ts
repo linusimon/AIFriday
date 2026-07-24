@@ -22,7 +22,7 @@ export class ChatService {
     );
   }
 
-  sendMessage(sessionId: string, message: string): Observable<{
+  sendMessage(sessionId: string, message: string, image?: string): Observable<{
     success: boolean;
     response: string;
     tool_calls?: any[];
@@ -33,7 +33,8 @@ export class ChatService {
       tool_calls?: any[];
     }>(`${this.apiUrl}/chat/message`, {
       session_id: sessionId,
-      message: message
+      message: message,
+      image: image
     });
   }
 

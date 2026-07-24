@@ -9,13 +9,27 @@
         </div>
         <div>
           <h2>AI Task Intelligence Assistant</h2>
-          <p class="subtitle">Real-time reasoning, SLA & cost optimization helper</p>
+          <p class="subtitle">Multimodal Vision, Voice Reasoning & SLA/Cost Advisor</p>
         </div>
       </div>
       
-      <button class="clear-btn" (click)="clearChat()" *ngIf="messages.length > 0">
-        <i class="fa-solid fa-rotate-right"></i> Reset Session
-      </button>
+      <div class="header-actions flex items-center gap-2">
+        <button class="voice-toggle-btn" [class.active]="isTtsEnabled" (click)="isTtsEnabled = !isTtsEnabled" title="Toggle Auto Read-Aloud (TTS)">
+          <i class="fa-solid" [class.fa-volume-high]="isTtsEnabled" [class.fa-volume-xmark]="!isTtsEnabled"></i>
+        </button>
+        <button class="clear-btn" (click)="clearChat()" *ngIf="messages.length > 0">
+          <i class="fa-solid fa-rotate-right"></i> Reset Session
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Speech Banner -->
+    <div class="speech-active-banner" *ngIf="isPlayingSpeech">
+      <div class="speech-info">
+        <span class="speaking-wave"><i class="fa-solid fa-waveform fa-bounce"></i></span>
+        <span>Speaking Response Aloud...</span>
+      </div>
+      <button class="stop-speech-btn" (click)="stopSpeech()"><i class="fa-solid fa-circle-stop"></i> Stop</button>
     </div>
 
     <!-- Error Banner -->
@@ -39,7 +53,16 @@
           <div class="bubble-meta">
             <span class="role-name">{{ message.role === 'user' ? 'You' : 'AI Assistant' }}</span>
             <span class="time-stamp">{{ message.timestamp | date:'shortTime' }}</span>
+            <button *ngIf="message.role === 'assistant'" class="speaker-bubble-btn" (click)="speak(message.content)" title="Speak message aloud">
+              <i class="fa-solid fa-volume-high"></i>
+            </button>
           </div>
+
+          <!-- Attached Image Preview inside Message -->
+          <div *ngIf="message.image" class="chat-attached-image-wrapper">
+            <img [src]="message.image" alt="Attached document" class="chat-attached-image" />
+          </div>
+
           <div class="bubble-text">{{ message.content }}</div>
         </div>
       </div>
@@ -61,11 +84,44 @@
 
     <!-- Input Section -->
     <div class="input-section">
+      <!-- Attached Image Thumbnail Preview Bar -->
+      <div *ngIf="attachedImageBase64" class="attached-preview-bar glass-panel-sm">
+        <div class="preview-thumb">
+          <img [src]="attachedImageBase64" alt="Attached file" />
+        </div>
+        <span class="preview-name"><i class="fa-solid fa-file-image text-cyan"></i> {{ attachedImageName }}</span>
+        <button class="remove-attachment-btn" (click)="clearImageAttachment()" title="Remove attachment">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
       <div class="input-glass-box">
+        <!-- File Picker Input (Hidden) -->
+        <input 
+          type="file" 
+          id="chatImageInput" 
+          (change)="onImageSelected($event)" 
+          accept="image/*" 
+          style="display: none;" />
+
+        <div class="input-toolbar-left">
+          <label for="chatImageInput" class="tool-btn" title="Attach image / architecture diagram">
+            <i class="fa-solid fa-paperclip"></i>
+          </label>
+
+          <button 
+            class="tool-btn mic-btn" 
+            [class.listening]="isListening" 
+            (click)="toggleListening()" 
+            title="Voice STT Input">
+            <i class="fa-solid" [class.fa-microphone]="!isListening" [class.fa-microphone-lines]="isListening" [class.fa-pulse]="isListening"></i>
+          </button>
+        </div>
+
         <textarea 
           [(ngModel)]="userMessage"
           (keypress)="onKeyPress($event)"
-          placeholder="Ask a question about your routing decision, cost model, or alternative resources..."
+          placeholder="Ask about resources, cost models, or attach an architecture diagram image..."
           rows="2"
           class="chat-input"
           [disabled]="loading || !sessionId"></textarea>
@@ -73,7 +129,7 @@
         <button 
           class="send-btn"
           (click)="sendMessage()"
-          [disabled]="!userMessage.trim() || loading || !sessionId">
+          [disabled]="(!userMessage.trim() && !attachedImageBase64) || loading || !sessionId">
           <i class="fa-solid" [class.fa-spinner]="loading" [class.fa-spin]="loading" [class.fa-paper-plane]="!loading"></i>
           <span>Send</span>
         </button>

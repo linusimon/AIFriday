@@ -43,12 +43,10 @@ class DataEnrichmentAgent(Agent):
                 "status": "no_data"
             }
         
-        # Enrich each task with contextual information
-        enriched_tasks = []
-        
-        for task in cleansed_tasks:
-            enriched_task = self.enrich_task(task)
-            enriched_tasks.append(enriched_task)
+        # Enrich each task with contextual information in parallel
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(len(cleansed_tasks), 5)) as executor:
+            enriched_tasks = list(executor.map(self.enrich_task, cleansed_tasks))
         
         self.log(f"Enriched {len(enriched_tasks)} tasks")
         

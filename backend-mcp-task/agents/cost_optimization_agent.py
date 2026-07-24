@@ -44,19 +44,20 @@ class CostOptimizationAgent(Agent):
                 "status": "insufficient_data"
             }
         
-        # Analyze costs for each task
-        task_cost_analysis = []
+        # Analyze costs for each task in parallel
+        from concurrent.futures import ThreadPoolExecutor
+        def analyze_pair(pair):
+            task, rec = pair
+            return self.analyze_task_costs(task, rec)
+
+        pairs = [(tasks[i], task_recommendations[i]) for i in range(min(len(tasks), len(task_recommendations)))]
+        with ThreadPoolExecutor(max_workers=min(len(pairs), 5)) as executor:
+            task_cost_analysis = list(executor.map(analyze_pair, pairs))
+
         total_cost_estimates = []
-        
-        for i, task in enumerate(tasks):
-            if i < len(task_recommendations):
-                recommendations = task_recommendations[i]
-                cost_analysis = self.analyze_task_costs(task, recommendations)
-                task_cost_analysis.append(cost_analysis)
-                
-                # Track total estimates
-                if cost_analysis.get('cost_recommendations'):
-                    total_cost_estimates.append(cost_analysis['cost_recommendations'][0].get('total_cost', 0))
+        for cost_analysis in task_cost_analysis:
+            if cost_analysis.get('cost_recommendations'):
+                total_cost_estimates.append(cost_analysis['cost_recommendations'][0].get('total_cost', 0))
         
         # Generate overall cost summary
         cost_summary = self.generate_cost_summary(task_cost_analysis, total_cost_estimates)

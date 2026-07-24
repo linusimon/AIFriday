@@ -40,13 +40,10 @@ class ResourceMatchingAgent(Agent):
                 "status": "no_data"
             }
         
-        # Match resources for each task
-        task_recommendations = []
-        
-        for i, task in enumerate(tasks):
-            self.log(f"Matching resources for task {i+1}/{len(tasks)}: {task.get('task_name')}")
-            recommendations = self.match_resources_for_task(task)
-            task_recommendations.append(recommendations)
+        # Match resources for each task in parallel
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(len(tasks), 5)) as executor:
+            task_recommendations = list(executor.map(self.match_resources_for_task, tasks))
         
         return {
             "task_recommendations": task_recommendations,

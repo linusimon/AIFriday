@@ -44,13 +44,15 @@ class DecisionAgent(Agent):
                 "status": "no_data"
             }
         
-        # Generate decisions for each task
-        final_decisions = []
-        
-        for i, task in enumerate(tasks):
-            self.log(f"Making decision for task {i+1}/{len(tasks)}: {task.get('task_name')}")
-            decision = self.make_task_decision(task, i, context)
-            final_decisions.append(decision)
+        # Generate decisions for each task in parallel
+        from concurrent.futures import ThreadPoolExecutor
+        def make_decision_item(item):
+            i, task = item
+            return self.make_task_decision(task, i, context)
+
+        items = list(enumerate(tasks))
+        with ThreadPoolExecutor(max_workers=min(len(items), 5)) as executor:
+            final_decisions = list(executor.map(make_decision_item, items))
         
         # Generate executive decision summary
         decision_summary = self.generate_decision_summary(final_decisions)

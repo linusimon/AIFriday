@@ -44,12 +44,15 @@ class RiskSLAAgent(Agent):
                 "status": "no_data"
             }
         
-        # Analyze risks for each task
-        risk_analyses = []
-        
-        for i, task in enumerate(tasks):
-            risk_analysis = self.analyze_task_risk(task, i, task_recommendations)
-            risk_analyses.append(risk_analysis)
+        # Analyze risks for each task in parallel
+        from concurrent.futures import ThreadPoolExecutor
+        def analyze_risk_item(item):
+            i, task = item
+            return self.analyze_task_risk(task, i, task_recommendations)
+
+        items = list(enumerate(tasks))
+        with ThreadPoolExecutor(max_workers=min(len(items), 5)) as executor:
+            risk_analyses = list(executor.map(analyze_risk_item, items))
         
         # Generate overall risk summary
         risk_summary = self.generate_risk_summary(risk_analyses)

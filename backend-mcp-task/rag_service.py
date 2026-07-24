@@ -9,7 +9,18 @@ from config import Config
 from tcs_embeddings import TCSGenAIEmbeddings
 
 class RAGService:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(RAGService, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self):
+        if getattr(self, '_initialized', False):
+            return
+        self._initialized = True
         print("[RAG] Loading TCS GenAI embedding model for Task Routing...")
         self.embedding_model = None
         self.embeddings_available = False
