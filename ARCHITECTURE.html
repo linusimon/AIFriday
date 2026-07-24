@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Architecture Documentation</title>
+    <!-- GitHub Markdown CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
+    <!-- Highlight.js for Code Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Mermaid.js for Rendering Architecture Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 45px;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .markdown-body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        .mermaid {
+            background-color: #161b22;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+        @media (max-width: 767px) {
+            body {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <article class="markdown-body">
+        <h1 id="system-architecture-technical-specifications">System Architecture &amp; Technical Specifications</h1>
+<h2 id="intelligent-task-routing-information-chunking-system">Intelligent Task Routing &amp; Information Chunking System</h2>
+<hr />
+<h2 id="1-executive-summary-system-overview">1. Executive Summary &amp; System Overview</h2>
+<p>The <strong>Intelligent Task Routing System</strong> is an enterprise-grade AI solution developed for the TCS AI Friday Challenge. It combines <strong>Multi-Agent AI Orchestration</strong>, <strong>Model Context Protocol (MCP)</strong> servers, and <strong>Retrieval-Augmented Generation (RAG)</strong> to automatically analyze project requirements documents, classify tasks, optimize resource allocations (human experts &amp; AI agents), evaluate cost/SLA risks, and provide conversational voice/text assistance with adaptive information chunking.</p>
+<hr />
+<h2 id="2-high-level-system-architecture-system-context">2. High-Level System Architecture (System Context)</h2>
+<div class="mermaid">
+graph TD
+    subgraph Client Layer [Frontend - Angular 17 SPA]
+        UI[Angular 17 Web App / Glassmorphism UI]
+        Admin[Admin Portal]
+        TaskUI[Task Analysis & Breakdown]
+        ChatUI[Voice & Text Chat Assistant]
+        OCR[OCR & File Upload Module]
+    end
+
+    subgraph API Gateway & Service Layer [Flask Backend :5004]
+        Flask[Flask Application & REST Gateway]
+        JWT[JWT Authentication Interceptor]
+        Router[Task Analysis API & Endpoint Routers]
+    end
+
+    subgraph Multi-Agent Orchestration Layer
+        Orchestrator[Multi-Agent Pipeline Orchestrator]
+        A1[1. Document Analysis Agent]
+        A2[2. Data Cleansing Agent]
+        A3[3. Task Classification Agent]
+        A4[4. Data Enrichment / RAG Agent]
+        A5[5. Resource Matching Agent]
+        A6[6. Workload Optimization Agent]
+        A7[7. Cost Optimization Agent]
+        A8[8. Risk & SLA Agent]
+        A9[9. Decision Synthesis Agent]
+        A10[10. Summary Agent]
+    end
+
+    subgraph MCP Server Mesh [Model Context Protocol]
+        MCP_Res[Resource Mgmt Server]
+        MCP_Skill[Skill Repository Server]
+        MCP_Pol[Policy Mgmt Server]
+        MCP_Exp[Expert Knowledge Server]
+        MCP_SLA[SLA Mgmt Server]
+        MCP_Cost[Cost Optimization Server]
+        MCP_Hist[Historical Performance Server]
+        MCP_Proj[Project Mgmt Server]
+        MCP_Analytics[Analytics Server]
+    end
+
+    subgraph Data & Storage Layer
+        DB[(SQLite Database - task_routing.db)]
+        FAISS[(FAISS Vector DB Index)]
+        TCS_Embed[TCS GenAI / HuggingFace Embeddings]
+    end
+
+    UI -->|HTTP / REST / JWT| Flask
+    Flask --> JWT
+    Flask --> Router
+    Router --> Orchestrator
+
+    Orchestrator --> A1 --> A2 --> A3 --> A4 --> A5 --> A6 --> A7 --> A8 --> A9 --> A10
+
+    A4 <--> FAISS
+    A4 <--> TCS_Embed
+
+    A5 <--> MCP_Res
+    A5 <--> MCP_Skill
+    A6 <--> MCP_Res
+    A6 <--> MCP_Hist
+    A7 <--> MCP_Cost
+    A8 <--> MCP_SLA
+    A8 <--> MCP_Pol
+    A9 <--> MCP_Exp
+    A9 <--> MCP_Proj
+
+    MCP_Res <--> DB
+    MCP_Skill <--> DB
+    MCP_Pol <--> DB
+    MCP_Exp <--> DB
+    MCP_SLA <--> DB
+    MCP_Cost <--> DB
+    MCP_Hist <--> DB
+    MCP_Proj <--> DB
+    MCP_Analytics <--> DB
+</div>
+
+<hr />
+<h2 id="3-data-flow-subsystem-interaction-architecture-c4-level-2">3. Data Flow &amp; Subsystem Interaction Architecture (C4 Level 2)</h2>
+<div class="mermaid">
+graph LR
+    subgraph Frontend Subsystems
+        Comp_Upload[Upload & Drag-Drop Component]
+        Comp_Results[Results & Task Extraction View]
+        Comp_Charts[Chart.js / ngx-charts Visualizer]
+        Comp_Voice[Web Speech Voice Synthesizer]
+        Comp_Chat[Conversational Chat Component]
+    end
+
+    subgraph Backend Core Services
+        Svc_Auth[JWT Auth Blueprint /auth/login]
+        Svc_Analyze[Task Routing Blueprint /analyze]
+        Svc_MCP[MCP Gateway Router /api/mcp]
+        Svc_RAG[RAG Service Vector Store Engine]
+    end
+
+    subgraph Data & Pipeline Operations
+        Pipeline[Agent Execution Pipeline]
+        MCP_Mesh[9 MCP Tool Servers]
+        VectorDB[FAISS Index Vector Database]
+        RelationalDB[SQLite Database File]
+    end
+
+    Comp_Upload -->|Document Payload| Svc_Analyze
+    Svc_Analyze -->|Trigger| Pipeline
+    Pipeline -->|Query Policies & SOPs| Svc_RAG
+    Svc_RAG -->|Similarity Search| VectorDB
+    Pipeline -->|Tool Call Execution| Svc_MCP
+    Svc_MCP -->|Read/Write Operations| MCP_Mesh
+    MCP_Mesh -->|SQL Transactions| RelationalDB
+    Pipeline -->|Aggregated Task Plan| Svc_Analyze
+    Svc_Analyze -->|Structured Analysis JSON| Comp_Results
+    Comp_Results -->|Render Metrics| Comp_Charts
+    Comp_Results -->|Text/Speech Output| Comp_Voice
+    Comp_Chat -->|Conversational Q&A| Svc_MCP
+</div>
+
+<hr />
+<h2 id="4-infrastructure-deployment-topology-diagram">4. Infrastructure &amp; Deployment Topology Diagram</h2>
+<div class="mermaid">
+graph TB
+    subgraph Client Workstation Browser
+        Browser[Web Browser - Angular 17 SPA :4204]
+    end
+
+    subgraph Host Machine Environment [Windows / Linux]
+        subgraph Frontend Node Environment
+            AngularDev[Angular Dev Server / Node.js Engine]
+            Proxy[Angular HTTP Proxy Config :4204 -> :5004]
+        end
+
+        subgraph Python Virtual Environment
+            FlaskApp[Flask WSGI / Gunicorn App :5004]
+            AgentRunner[Agent Orchestrator Worker Pool]
+            MCPRegistry[MCP Server Blueprints Registry]
+        end
+
+        subgraph Local File System Storage
+            UploadsDir[uploads/ Directory]
+            FaissDir[faiss_index/ Storage]
+            SQLiteFile[data/task_routing.db]
+        end
+    end
+
+    subgraph Remote AI Cloud Services
+        GenAI_API[TCS GenAI / HuggingFace API Endpoint]
+    end
+
+    Browser -->|HTTP Requests| AngularDev
+    AngularDev --> Proxy
+    Proxy -->|Forward REST Calls| FlaskApp
+    FlaskApp --> AgentRunner
+    FlaskApp --> MCPRegistry
+    AgentRunner -->|Store Uploads| UploadsDir
+    AgentRunner -->|Embeddings & RAG| GenAI_API
+    AgentRunner -->|Index Queries| FaissDir
+    MCPRegistry -->|Database Reads/Writes| SQLiteFile
+</div>
+
+<hr />
+<h2 id="5-voice-information-chunking-state-machine-architecture">5. Voice &amp; Information Chunking State Machine Architecture</h2>
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> Idle: User Opens Chat / Voice Assistant
+    Idle --> Listening: Speech / Text Input Triggered
+    Listening --> Processing: User Utterance Captured
+    Processing --> Segmenting: Agent Generates Full Response
+
+    state Segmenting {
+        [*] --> SplitChunks: Divide Text into Micro-Chunks
+        SplitChunks --> OrderChunks: Sequence by Priority & Context
+    }
+
+    Segmenting --> PresentingChunk: Deliver Chunk N (Audio + Highlighted Text)
+
+    state PresentingChunk {
+        [*] --> SpeakingText: TTS Playback Active
+        SpeakingText --> AwaitingFeedback: Audio Finish / Pause
+    }
+
+    AwaitingFeedback --> ComprehensionCheck: System Prompts ("Did that make sense?")
+
+    ComprehensionCheck --> PresentingChunk: User says "Repeat" / "Replay" (Replay current chunk)
+    ComprehensionCheck --> SimplifyingChunk: User says "Explain simpler" / "Confused"
+    ComprehensionCheck --> PresentingChunk: User says "Yes" / "Next" (Advance to Chunk N+1)
+
+    SimplifyingChunk --> PresentingChunk: Re-present simplified chunk text
+
+    AwaitingFeedback --> Completed: All Chunks Delivered & Confirmed
+    Completed --> Idle: Wait for next query
+</div>
+
+<hr />
+<h2 id="6-multi-agent-execution-sequence-flow">6. Multi-Agent Execution Sequence Flow</h2>
+<div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as User / Admin
+    participant Gateway as Flask Backend Gateway
+    participant Orchestrator as Agent Orchestrator
+    participant RAG as RAG & FAISS Vector Service
+    participant MCP as MCP Server Mesh
+    participant DB as SQLite DB
+
+    User->>Gateway: POST /api/task-routing/analyze (Upload Requirement Doc)
+    Gateway->>Orchestrator: Execute Multi-Agent Task Routing Workflow
+
+    rect rgb(240, 248, 255)
+        note right of Orchestrator: Step 1: Document Processing
+        Orchestrator->>Orchestrator: 1. Document Analysis Agent (Extract raw sections)
+        Orchestrator->>Orchestrator: 2. Data Cleansing Agent (Normalize & format text)
+        Orchestrator->>Orchestrator: 3. Task Classification Agent (Decompose into granular tasks)
+    end
+
+    rect rgb(255, 245, 238)
+        note right of Orchestrator: Step 2: RAG Enrichment & Skill Matching
+        Orchestrator->>RAG: 4. Data Enrichment Agent (Search vector index for contextual SOPs)
+        RAG-->>Orchestrator: Contextual policies & domain knowledge
+        Orchestrator->>MCP: 5. Resource Matching Agent (Query skill matching tool)
+        MCP->>DB: Query available resources & skill matrix
+        DB-->>MCP: Candidate resources
+        MCP-->>Orchestrator: Ranked resource-skill fit scores
+    end
+
+    rect rgb(240, 255, 240)
+        note right of Orchestrator: Step 3: Workload, Cost & Risk Analysis
+        Orchestrator->>MCP: 6. Workload Optimization Agent (Check capacity & balance)
+        Orchestrator->>MCP: 7. Cost Optimization Agent (Estimate resource & agent costs)
+        Orchestrator->>MCP: 8. Risk & SLA Agent (Assess SLA compliance & risk rating)
+    end
+
+    rect rgb(255, 250, 240)
+        note right of Orchestrator: Step 4: Decision Synthesis & Output
+        Orchestrator->>MCP: 9. Decision Synthesis Agent (Consolidate optimal assignment)
+        Orchestrator->>Orchestrator: 10. Summary Agent (Generate Executive Brief & Action Plan)
+    end
+
+    Orchestrator-->>Gateway: Consolidated Analysis Result JSON
+    Gateway-->>User: Structured Response (Tasks, Assignments, Charts, Costs, Risks)
+</div>
+
+<hr />
+<h2 id="7-model-context-protocol-mcp-server-specification">7. Model Context Protocol (MCP) Server Specification</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">MCP Server</th>
+<th style="text-align: left;">Key Capabilities &amp; Exposed Tools</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Resource Management</strong></td>
+<td style="text-align: left;"><code>get_available_resources</code>, <code>get_resource_workload</code>, <code>update_workload</code>, <code>get_resource_skills</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Skill Repository</strong></td>
+<td style="text-align: left;"><code>match_skills</code>, <code>search_skills_by_category</code>, <code>get_all_skills</code>, <code>evaluate_skill_gap</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Policy Management</strong></td>
+<td style="text-align: left;"><code>search_policies</code>, <code>check_policy_compliance</code>, <code>get_escalation_rules</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Expert Knowledge</strong></td>
+<td style="text-align: left;"><code>search_expert_insights</code>, <code>get_similar_historical_tasks</code>, <code>recommend_approach</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>SLA Management</strong></td>
+<td style="text-align: left;"><code>verify_sla_compliance</code>, <code>calculate_target_deadline</code>, <code>get_sla_rules</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Cost Optimization</strong></td>
+<td style="text-align: left;"><code>estimate_assignment_cost</code>, <code>calculate_agent_vs_human_cost</code>, <code>optimize_budget</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Historical Performance</strong></td>
+<td style="text-align: left;"><code>get_resource_performance_history</code>, <code>get_completion_rate</code>, <code>get_quality_score</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Project Management</strong></td>
+<td style="text-align: left;"><code>get_active_projects</code>, <code>create_project_task</code>, <code>update_task_status</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Analytics</strong></td>
+<td style="text-align: left;"><code>generate_utilization_metrics</code>, <code>get_cost_breakdown_analytics</code>, <code>get_risk_summary</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-database-entity-relationship-diagram">8. Database Entity Relationship Diagram</h2>
+<div class="mermaid">
+erDiagram
+    PROJECTS ||--o{ TASKS : contains
+    RESOURCES ||--o{ TASK_ASSIGNMENTS : assigned_to
+    TASKS ||--o{ TASK_ASSIGNMENTS : receives
+    KNOWLEDGE_BASE ||--o{ RAG_EMBEDDINGS : indexed_by
+    SLA_RULES ||--o{ TASKS : governs
+    COST_MODELS ||--o{ RESOURCES : applies_to
+
+    PROJECTS {
+        int id PK
+        string name
+        string description
+        string status
+        datetime created_at
+    }
+
+    TASKS {
+        int id PK
+        int project_id FK
+        string task_name
+        string complexity
+        int estimated_hours
+        string status
+    }
+
+    RESOURCES {
+        int id PK
+        string name
+        string type "human / ai_agent"
+        string role
+        string skills_json
+        float hourly_rate
+        int current_workload
+        int max_capacity
+    }
+
+    KNOWLEDGE_BASE {
+        int id PK
+        string title
+        string document_type
+        string content
+        string tags
+    }
+</div>
+    </article>
+
+    <script>
+        hljs.highlightAll();
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html>

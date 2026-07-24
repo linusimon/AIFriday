@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Overview README</title>
+    <!-- GitHub Markdown CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
+    <!-- Highlight.js for Code Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Mermaid.js for Rendering Architecture Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 45px;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .markdown-body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        .mermaid {
+            background-color: #161b22;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+        @media (max-width: 767px) {
+            body {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <article class="markdown-body">
+        <h1 id="intelligent-task-routing-information-chunking-system">Intelligent Task Routing &amp; Information Chunking System</h1>
+<blockquote>
+<p><strong>TCS AI Friday Season 2 Solution</strong> — Intelligent Task Routing System with Multi-Agent AI Orchestration, 9 Model Context Protocol (MCP) Servers, RAG-powered Knowledge Base, and Adaptive Information Chunking Voice/Text Assistant.</p>
+</blockquote>
+<hr />
+<h2 id="overview">📚 Overview</h2>
+<p>The <strong>Intelligent Task Routing System</strong> addresses complex resource allocation, task classification, and user comprehension challenges. It processes unstructured requirement documents, extracts &amp; classifies tasks, matches tasks to human experts and AI agents based on skill matrices, balances workload capacities, estimates costs, verifies SLA compliance, and presents decisions with executive summaries and interactive voice/text guidance.</p>
+<h3 id="key-capabilities">Key Capabilities</h3>
+<ul>
+<li>🤖 <strong>10-Agent Autonomous Pipeline</strong>: Sequential and parallel agent orchestration covering document parsing, data cleansing, task classification, RAG enrichment, skill matching, workload optimization, cost optimization, risk/SLA assessment, decision synthesis, and executive summarization.</li>
+<li>🔌 <strong>9 Model Context Protocol (MCP) Servers</strong>: Standardized tools exposing domain functionality for resources, skills, policies, expert knowledge, SLAs, costs, historical performance, project management, and analytics.</li>
+<li>🔍 <strong>RAG &amp; FAISS Vector Search</strong>: Vector embedding and retrieval for company policies, SOPs, historical project documentation, and domain knowledge.</li>
+<li>🗣️ <strong>Adaptive Information Chunking Assistant</strong>: Voice and chat interface designed in alignment with <strong>PAS 901 Cognitive Accessibility Principles</strong>, featuring step-by-step information chunking, interactive pacing, replay, simplification, and comprehension validation.</li>
+<li>💎 <strong>Modern Angular 17 UI</strong>: Responsive admin dashboard, interactive task analysis workbench, chart visualizations, and Glassmorphism design aesthetics.</li>
+</ul>
+<hr />
+<h2 id="system-architecture">🏛️ System Architecture</h2>
+<p>Refer to the complete technical specifications and architectural diagrams in <a href="file:///C:/Source/AIFriday/ARCHITECTURE.md">ARCHITECTURE.md</a>.</p>
+<div class="mermaid">
+graph TD
+    Client[Angular 17 SPA Frontend] <--> Gateway[Flask Backend API :5004]
+    Gateway <--> Orchestrator[Multi-Agent Pipeline]
+    Orchestrator <--> MCP[9 MCP Servers]
+    Orchestrator <--> RAG[FAISS Vector DB & Embeddings]
+    MCP <--> DB[(SQLite Database)]
+</div>
+
+<hr />
+<h2 id="quick-start-guide">🚀 Quick Start Guide</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li><strong>Python</strong>: Version 3.10 or higher</li>
+<li><strong>Node.js</strong>: Version 18 or higher &amp; npm</li>
+<li><strong>OS</strong>: Windows / Linux / macOS</li>
+</ul>
+<hr />
+<h3 id="1-start-backend-server">1. Start Backend Server</h3>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>backend-mcp-task
+setup.bat
+start.bat
+</code></pre></div>
+
+<p><em>The backend API will run on <code>http://localhost:5004</code>.</em></p>
+<hr />
+<h3 id="2-start-frontend-application">2. Start Frontend Application</h3>
+<div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>frontend-task-glass
+setup.bat
+start.bat
+</code></pre></div>
+
+<p><em>The web interface will open at <code>http://localhost:4204</code>.</em></p>
+<hr />
+<h2 id="default-credentials">🔐 Default Credentials</h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Role</th>
+<th style="text-align: left;">Username</th>
+<th style="text-align: left;">Password</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Administrator</strong></td>
+<td style="text-align: left;"><code>admin</code></td>
+<td style="text-align: left;"><code>admin123</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Manager</strong></td>
+<td style="text-align: left;"><code>manager</code></td>
+<td style="text-align: left;"><code>manager123</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Resource / User</strong></td>
+<td style="text-align: left;"><code>user</code></td>
+<td style="text-align: left;"><code>user123</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="project-repository-structure">📂 Project Repository Structure</h2>
+<div class="codehilite"><pre><span></span><code><span class="n">AIFriday</span><span class="o">/</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">ARCHITECTURE</span><span class="o">.</span><span class="n">md</span><span class="w">              </span><span class="c1"># Detailed System Architecture &amp; Diagrams</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">README</span><span class="o">.</span><span class="n">md</span><span class="w">                    </span><span class="c1"># Main Repository Guide</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">Question1</span><span class="w">                    </span><span class="c1"># AI Friday Problem Statement Definition</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">backend</span><span class="o">-</span><span class="n">mcp</span><span class="o">-</span><span class="n">task</span><span class="o">/</span><span class="w">            </span><span class="c1"># Flask Backend Server</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">agents</span><span class="o">/</span><span class="w">                  </span><span class="c1"># 10 Autonomous AI Agents &amp; Orchestrator</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">mcp_servers</span><span class="o">/</span><span class="w">             </span><span class="c1"># 9 Model Context Protocol (MCP) Servers</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">app</span><span class="o">.</span><span class="n">py</span><span class="w">                   </span><span class="c1"># Main Flask Gateway &amp; API Endpoints</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">database</span><span class="o">.</span><span class="n">py</span><span class="w">              </span><span class="c1"># SQLite Database Initializer &amp; Schemas</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">rag_service</span><span class="o">.</span><span class="n">py</span><span class="w">           </span><span class="c1"># RAG Vector Store (FAISS) &amp; Embeddings</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">task_routing</span><span class="o">.</span><span class="n">db</span><span class="w">          </span><span class="c1"># SQLite Database File</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">setup</span><span class="o">.</span><span class="n">bat</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">start</span><span class="o">.</span><span class="n">bat</span><span class="w">    </span><span class="c1"># Automation Scripts</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span><span class="w">         </span><span class="c1"># Python Dependencies</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">frontend</span><span class="o">-</span><span class="n">task</span><span class="o">-</span><span class="n">glass</span><span class="o">/</span><span class="w">         </span><span class="c1"># Angular 17 Glassmorphism Frontend UI</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">src</span><span class="o">/</span><span class="n">app</span><span class="o">/</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">admin</span><span class="o">/</span><span class="w">               </span><span class="c1"># Resource, Project, Task &amp; SLA Management</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">analysis</span><span class="o">/</span><span class="w">            </span><span class="c1"># Document Upload, Task Extraction &amp; Charts</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">chat</span><span class="o">/</span><span class="w">                </span><span class="c1"># Voice Assistant, Chunking UI &amp; OCR</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">login</span><span class="o">/</span><span class="w">               </span><span class="c1"># Authentication Page</span>
+<span class="err">│</span><span class="w">   </span><span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">services</span><span class="o">/</span><span class="w">            </span><span class="c1"># RxJS HTTP Services &amp; API Interceptors</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">setup</span><span class="o">.</span><span class="n">bat</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">start</span><span class="o">.</span><span class="n">bat</span><span class="w">    </span><span class="c1"># Automation Scripts</span>
+<span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">package</span><span class="o">.</span><span class="n">json</span><span class="w">             </span><span class="c1"># Frontend Dependencies</span>
+<span class="err">└──</span><span class="w"> </span><span class="n">frontend</span><span class="o">-</span><span class="n">task</span><span class="o">/</span><span class="w">               </span><span class="c1"># Standard Material UI Frontend Component</span>
+</code></pre></div>
+
+<hr />
+<h2 id="key-api-endpoints">🧪 Key API Endpoints</h2>
+<ul>
+<li><strong>POST</strong> <code>/api/auth/login</code> — User authentication &amp; JWT generation.</li>
+<li><strong>POST</strong> <code>/api/task-routing/analyze</code> — Document upload &amp; multi-agent task routing analysis pipeline.</li>
+<li><strong>GET</strong> <code>/api/mcp/&lt;server&gt;/&lt;tool&gt;</code> — Standardized MCP tool endpoints (e.g., <code>/api/mcp/resource/get_available_resources</code>).</li>
+<li><strong>GET</strong> <code>/api/health</code> — System health check.</li>
+</ul>
+<hr />
+<h2 id="documentation-links">📜 Documentation Links</h2>
+<ul>
+<li>📐 <strong><a href="file:///C:/Source/AIFriday/ARCHITECTURE.md">ARCHITECTURE.md</a></strong> — Architectural diagrams, sequence flows, ERD, and component specs.</li>
+<li>📋 <strong><a href="file:///C:/Source/AIFriday/Question1">Question1</a></strong> — Problem statement details for Information Chunking and Voice Assistants.</li>
+</ul>
+    </article>
+
+    <script>
+        hljs.highlightAll();
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html>
