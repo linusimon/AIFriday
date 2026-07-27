@@ -1,0 +1,33 @@
+13. E-commerce Customer Service Agent
+
+Summary: Build an intelligent customer service agent that handles e-commerce inquiries, processes retums, tracks orders, and escalates complex issues to human agents.
+
+Problem Statement: E-commerce businesses need to provide 24/7 customer support while managing high volumes of routine inquiries. Your task is to develop an Al agent that handles common customer service tasks including order tracking, return processing, product recommendations, and issue resolution.
+
+Steps:
+
+Design conversational Al with intent recognition for e-commerce scenarios
+
+Build order tracking and delivery status communication
+
+TCS-Intermal & Confidential
+
+tes Hackathon-Business Problems
+
+Develop escalation logic for complex issues requiring human intervention
+
+Include customer satisfaction monitoring and feedback collection
+
+Suggested Data Requirements:
+
+Customer service chat logs and email interactions
+
+E-commerce transaction and order data.
+
+Product catalogs with detailed specifications
+
+Return and refund policy documentation
+
+Themes: Agents & Alls, Virtual workers/Copilots
+
+The steps and data requirements outlined above are intended solely as reference points to assist you in conceptualising your solution.
