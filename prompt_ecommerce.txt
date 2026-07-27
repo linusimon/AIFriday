@@ -1,0 +1,781 @@
+# ROLE
+
+You are a Principal AI Solutions Architect, Senior Full Stack Engineer, Python Architect, Angular Architect, GenAI Engineer, MCP Expert, Multi-Agent AI Expert, RAG Expert and Enterprise Software Engineer.
+
+Your responsibility is to generate a complete enterprise-grade AI solution for a TCS GenAI Hackathon.
+
+The generated application should be production-ready, modular, scalable, reusable, well documented and follow clean architecture principles.
+
+Never generate toy code or proof-of-concepts.
+
+Always generate enterprise quality code.
+
+---------------------------------------------------------
+
+
+# HACKATHON PROBLEM STATEMENT
+
+E-commerce Customer Service Agent
+
+Summary: Build an intelligent customer service agent that handles e-commerce inquiries, processes retuns, tracks orders, and escalates complex issues to human agents.
+
+Problem Statement: E-commerce businesses need to provide 24/7 customer support while managing high volumes of routine inquiries. Your task is to develop an Al agent that handles common customer service tasks including order tracking, return processing, product recommendations, and issue resolution.
+
+Steps:
+
+Design conversational Al with intent recognition for e-commerce scenarios
+
+Build order tracking and delivery status communication
+
+Hackathon-Business Problems
+
+Develop escalation logic for complex issues requiring human intervention
+
+Include customer satisfaction monitoring and feedback collection
+
+Suggested Data Requirements:
+
+Customer service chat logs and email interactions
+
+E-commerce transaction and order data.
+
+Product catalogs with detailed specifications
+
+Return and refund policy documentation
+
+Themes: Agents & Alls, Virtual workers/Copilots
+
+The steps and data requirements outlined above are intended solely as reference points to assist you in conceptualising your solution.
+
+Build an Intelligent AI Customer Service Agent for E-Commerce.
+
+The AI solution should provide 24/7 customer support capable of:
+
+• Conversational AI
+• Order Tracking
+• Return Processing
+• Refund Status
+• Product Recommendation
+• Complaint Handling
+• Customer Satisfaction
+• Escalation to Human Agents
+• OCR based document understanding
+• Voice Assistant
+• Knowledge Assistant using RAG
+• Multi Agent AI
+• MCP Architecture
+
+---------------------------------------------------------
+
+# GOAL
+
+The final solution should look like an AI Customer Service Platform instead of a chatbot.
+
+The AI should behave like multiple virtual employees collaborating together.
+
+Create the new project at path C:\Users\GenAIKOCVISUSR13\Desktop\E-Commerse
+
+---------------------------------------------------------
+
+# ARCHITECTURE
+
+Implement a Multi-Agent Architecture.
+
+Create one Master Orchestrator Agent.
+
+The Orchestrator decides which specialized AI agents should execute.
+
+Multiple agents can work in parallel.
+
+---------------------------------------------------------
+
+MASTER AGENT
+
+Customer Support Orchestrator Agent
+
+Responsibilities
+
+• Session Management
+• Conversation Memory
+• Context Management
+• Agent Routing
+• Workflow Coordination
+• Final Response Generation
+
+---------------------------------------------------------
+
+SPECIALIZED AI AGENTS
+
+Create the following agents.
+
+1. Intent Detection Agent
+
+Detect
+
+Greeting
+
+Order Tracking
+
+Returns
+
+Refund
+
+Complaint
+
+Recommendation
+
+FAQ
+
+Policy
+
+Warranty
+
+Payment
+
+Cancellation
+
+Escalation
+
+Small Talk
+
+Feedback
+
+---------------------------------------------------------
+
+2. Order Tracking Agent
+
+Responsibilities
+
+Lookup Orders
+
+Shipment Status
+
+Courier Details
+
+Expected Delivery
+
+Delay Reasons
+
+Tracking Timeline
+
+---------------------------------------------------------
+
+3. Return Processing Agent
+
+Responsibilities
+
+Return Eligibility
+
+Refund Eligibility
+
+Replacement
+
+Exchange
+
+Policy Validation
+
+Return Window
+
+---------------------------------------------------------
+
+4. Refund Agent
+
+Responsibilities
+
+Refund Amount
+
+Refund Status
+
+Refund ETA
+
+Refund Method
+
+---------------------------------------------------------
+
+5. Product Recommendation Agent
+
+Responsibilities
+
+Semantic Product Search
+
+Recommendation
+
+Cross Sell
+
+Upsell
+
+Similar Products
+
+Personalized Recommendations
+
+---------------------------------------------------------
+
+6. OCR Agent
+
+Allow image upload.
+
+Extract
+
+Invoice
+
+Receipt
+
+Order ID
+
+Tracking Number
+
+Product Name
+
+Damage Images
+
+Warranty Card
+
+---------------------------------------------------------
+
+7. Voice Assistant Agent
+
+Speech To Text
+
+Text To Speech
+
+Voice Conversation
+
+---------------------------------------------------------
+
+8. RAG Knowledge Agent
+
+Answer using
+
+Return Policy
+
+Refund Policy
+
+Warranty
+
+Shipping Policy
+
+FAQ
+
+Product Manuals
+
+Terms and Conditions
+
+Never hallucinate.
+
+Always search Vector Database first.
+
+---------------------------------------------------------
+
+9. Sentiment Analysis Agent
+
+Detect
+
+Positive
+
+Neutral
+
+Negative
+
+Frustrated
+
+Urgent
+
+Angry
+
+VIP Customer
+
+---------------------------------------------------------
+
+10. Escalation Agent
+
+Automatically escalate when
+
+Refund Exception
+
+Policy Conflict
+
+Fraud Suspicion
+
+Repeated Complaint
+
+Negative Sentiment
+
+Generate
+
+Support Ticket
+
+Conversation Summary
+
+Priority
+
+Recommended Human Team
+
+---------------------------------------------------------
+
+11. Feedback Agent
+
+Collect
+
+CSAT
+
+Review
+
+Rating
+
+Suggestions
+
+---------------------------------------------------------
+
+# MULTI AGENT WORKFLOW
+
+User Message
+
+↓
+
+pi(personal information) local guard rail - if there is pi should mask
+
+↓
+
+Orchestrator
+
+↓
+
+Intent Agent -> if unrelated send a response to user that it's not related
+
+↓
+
+Parallel Execution
+
+Order Agent
+
+Return Agent
+
+OCR Agent
+
+Recommendation Agent
+
+RAG Agent
+
+Sentiment Agent
+
+↓
+
+Merge Responses
+
+↓
+
+Final AI Response
+
+---------------------------------------------------------
+
+# MCP ARCHITECTURE
+
+Implement MCP.
+
+Create MCP Servers.
+
+Customer MCP
+
+Order MCP
+
+Product MCP
+
+Policy MCP
+
+Knowledge MCP
+
+SQLite MCP
+
+Analytics MCP
+
+Notification MCP
+
+The LLM must NEVER directly access SQLite.
+
+Every database interaction should go through MCP.
+
+---------------------------------------------------------
+
+# RAG IMPLEMENTATION
+
+Use ChromaDB or FAISS.
+
+Generate embeddings for
+
+Product Catalog
+
+FAQs
+
+Return Policy
+
+Refund Policy
+
+Shipping Policy
+
+Warranty Documents
+
+Terms and Conditions
+
+Product Manuals
+
+Always
+
+Vector Search
+
+↓
+
+Relevant Chunks
+
+↓
+
+LLM
+
+---------------------------------------------------------
+
+# DATABASE
+
+Use SQLite.
+
+Design normalized schema.
+
+Tables
+
+Customers
+
+Orders
+
+Products
+
+OrderItems
+
+Returns
+
+Refunds
+
+SupportTickets
+
+ChatHistory
+
+Policies
+
+Embeddings
+
+Feedback
+
+Sessions
+
+ConversationMemory
+
+---------------------------------------------------------
+
+# FRONTEND
+
+Technology
+
+Angular
+
+Angular Material
+
+Bootstrap
+
+RxJS
+
+Signals
+
+Standalone Components
+
+Create beautiful modern UI.
+
+Pages
+
+Dashboard
+
+AI Chat
+
+Orders
+
+Returns
+
+Products
+
+Analytics
+
+Settings
+
+Components
+
+Chat Window
+
+Voice Button
+
+Microphone
+
+Speaker
+
+Upload Image
+
+Upload PDF
+
+Order Timeline
+
+Return Wizard
+
+Feedback Dialog
+
+Agent Status Panel
+
+Conversation History
+
+Theme Toggle
+
+Typing Animation
+
+Streaming Response
+
+Markdown Rendering
+
+---------------------------------------------------------
+
+# CHAT EXPERIENCE
+
+Support
+
+Streaming Responses
+
+Typing Indicator
+
+Suggested Questions
+
+Voice Input
+
+Voice Output
+
+Image Upload
+
+OCR Preview
+
+Chat History
+
+Agent Thinking Status
+
+Memory
+
+---------------------------------------------------------
+
+# BACKEND
+
+Python Flask
+
+Blueprint Architecture
+
+REST API
+
+Swagger
+
+SocketIO Streaming
+
+JWT Authentication
+
+Logging
+
+Configuration Management
+
+Dependency Injection
+
+Service Layer
+
+Repository Layer
+
+---------------------------------------------------------
+
+# OCR
+
+Allow upload of
+
+Invoice
+
+Receipt
+
+Order Label
+
+Package Photo
+
+Extract structured data.
+
+---------------------------------------------------------
+
+# VOICE
+
+Speech To Text
+
+Text To Speech
+
+Voice Commands
+
+Audio Playback
+
+---------------------------------------------------------
+
+# APIs
+
+Create REST APIs for
+
+Chat
+
+Orders
+
+Returns
+
+Refunds
+
+Recommendations
+
+OCR
+
+Voice
+
+Feedback
+
+Analytics
+
+Policies
+
+Sessions
+
+---------------------------------------------------------
+
+# TCS GENAI APIs
+
+Review the available APIs from https://genailab.tcs.in.
+
+Use suitable APIs for:
+
+• Chat Completion
+• Embeddings
+• OCR / Vision
+• Speech To Text
+• Text To Speech
+• Document Intelligence
+• Summarization
+• Safety / Moderation (if available)
+
+Wrap all external API calls in service classes so they can be replaced easily.
+
+---------------------------------------------------------
+
+# SECURITY
+
+JWT
+
+Role Based Access
+
+Rate Limiting
+
+Input Validation
+
+Prompt Injection Protection
+
+Secure File Upload
+
+Guard rails
+
+Personal Information restriction
+
+---------------------------------------------------------
+
+# LOGGING
+
+Structured Logging
+
+Audit Trail
+
+API Logging
+
+Agent Logging
+
+Workflow Logging
+
+---------------------------------------------------------
+
+# TESTING
+
+Unit Tests
+
+Integration Tests
+
+API Tests
+
+Mock Data
+
+---------------------------------------------------------
+
+# README
+
+Generate complete documentation.
+
+Include
+
+Architecture
+
+Folder Structure
+
+Agent Flow
+
+Setup
+
+Installation
+
+Running
+
+Environment Variables
+
+Screenshots Placeholder
+
+Future Enhancements
+
+---------------------------------------------------------
+
+# DELIVERABLES
+
+Generate the complete project.
+
+Create all required folders.
+
+Generate frontend.
+
+Generate backend.
+
+Generate APIs.
+
+Generate database schema.
+
+Generate MCP servers.
+
+Generate RAG pipeline.
+
+Generate AI agents.
+
+Generate prompts.
+
+Generate documentation.
+
+Generate sample data.
+
+Generate testing scripts.
+
+Generate Swagger documentation.
+
+Generate README.
+
+Follow enterprise coding standards.
+
+Produce modular, maintainable, reusable code suitable for a TCS GenAI Hackathon demonstration.
+
+#UI Experience
+
+Refer this UI https://cloud.justinmind.com/usernote/prototype/f25cfd72d429c8ee40991afafac05a708de7bd677e72529d81761eb7a3182852/index.html#/screens/d12245cc-1680-458d-89dd-4f0d7fb22724
+
+I want a similar UI with all the things mentioned here
+
+When enquiring about the ordered product, the application should ask for login if not already logged in.
+Also it should show all the products ordered and products 
