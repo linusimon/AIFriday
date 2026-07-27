@@ -1,0 +1,102 @@
+<div class="chat-page">
+  <div class="chat-card glass-panel">
+    <!-- Chat Header -->
+    <div class="chat-header">
+      <div class="header-title-box">
+        <div class="bot-status-avatar">
+          <i class="fa-solid fa-headset"></i>
+          <span class="online-indicator"></span>
+        </div>
+        <div>
+          <h2>AI Task Intelligence Assistant</h2>
+          <p class="subtitle">Real-time reasoning, SLA & cost optimization helper</p>
+        </div>
+      </div>
+      
+      <button class="clear-btn" (click)="clearChat()" *ngIf="messages.length > 0">
+        <i class="fa-solid fa-rotate-right"></i> Reset Session
+      </button>
+    </div>
+
+    <!-- Error Banner -->
+    <div class="error-banner" *ngIf="error">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Messages Container -->
+    <div class="messages-container">
+      <div *ngFor="let message of messages" 
+           class="message-bubble-wrapper" 
+           [class.user-wrapper]="message.role === 'user'"
+           [class.assistant-wrapper]="message.role === 'assistant'">
+        
+        <div class="avatar-badge">
+          <i class="fa-solid" [class.fa-user]="message.role === 'user'" [class.fa-robot]="message.role === 'assistant'"></i>
+        </div>
+        
+        <div class="bubble-content">
+          <div class="bubble-meta">
+            <span class="role-name">{{ message.role === 'user' ? 'You' : 'AI Assistant' }}</span>
+            <span class="time-stamp">{{ message.timestamp | date:'shortTime' }}</span>
+          </div>
+          <div class="bubble-text">{{ message.content }}</div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div *ngIf="loading" class="message-bubble-wrapper assistant-wrapper">
+        <div class="avatar-badge">
+          <i class="fa-solid fa-robot"></i>
+        </div>
+        <div class="bubble-content">
+          <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Section -->
+    <div class="input-section">
+      <div class="input-glass-box">
+        <textarea 
+          [(ngModel)]="userMessage"
+          (keypress)="onKeyPress($event)"
+          placeholder="Ask a question about your routing decision, cost model, or alternative resources..."
+          rows="2"
+          class="chat-input"
+          [disabled]="loading || !sessionId"></textarea>
+        
+        <button 
+          class="send-btn"
+          (click)="sendMessage()"
+          [disabled]="!userMessage.trim() || loading || !sessionId">
+          <i class="fa-solid" [class.fa-spinner]="loading" [class.fa-spin]="loading" [class.fa-paper-plane]="!loading"></i>
+          <span>Send</span>
+        </button>
+      </div>
+
+      <!-- Quick Chips -->
+      <div class="quick-questions">
+        <span class="quick-title"><i class="fa-solid fa-bolt text-cyan"></i> Prompts:</span>
+        <div class="chips-flex">
+          <button class="quick-chip" (click)="userMessage = 'Why was this resource recommended?'; sendMessage()">
+            Why this resource?
+          </button>
+          <button class="quick-chip" (click)="userMessage = 'What are the alternative options?'; sendMessage()">
+            Show alternatives
+          </button>
+          <button class="quick-chip" (click)="userMessage = 'What are the risks?'; sendMessage()">
+            Risk assessment
+          </button>
+          <button class="quick-chip" (click)="userMessage = 'How can we optimize costs?'; sendMessage()">
+            Cost optimization
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

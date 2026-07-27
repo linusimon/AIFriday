@@ -1,0 +1,283 @@
+<div class="analysis-page">
+  <!-- Executive Top Bar -->
+  <div class="page-header">
+    <div class="header-branding">
+      <div class="badge-status">
+        <span class="status-dot-pulse"></span>
+        <span>AI Multi-Agent Engine v1.0</span>
+      </div>
+      <h1 class="page-title gradient-text">Task Analysis & Resource Intelligence</h1>
+      <p class="subtitle">Automated requirement extraction, skill vector matching, and cost-optimized routing</p>
+    </div>
+    
+    <!-- Input Mode Toggle -->
+    <div class="mode-toggle glass-panel">
+      <button 
+        [class.active]="inputMode === 'file'" 
+        (click)="switchMode('file')"
+        class="mode-btn">
+        <i class="fa-solid fa-file-arrow-up"></i>
+        <span>Document Upload</span>
+      </button>
+      <button 
+        [class.active]="inputMode === 'text'" 
+        (click)="switchMode('text')"
+        class="mode-btn">
+        <i class="fa-solid fa-align-left"></i>
+        <span>Direct Text Input</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- File Upload Mode -->
+  <div *ngIf="!analysisResult && inputMode === 'file'" class="upload-section glass-panel">
+    <div 
+      class="drop-zone"
+      (dragover)="onDragOver($event)"
+      (drop)="onDrop($event)"
+      [class.has-file]="selectedFile">
+      
+      <input 
+        type="file" 
+        id="fileInput" 
+        (change)="onFileSelected($event)"
+        accept=".pdf,.docx,.txt"
+        style="display: none">
+      
+      <div *ngIf="!selectedFile" class="drop-zone-content">
+        <div class="upload-icon-circle">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <h3 class="upload-title">Drop Project Document Here</h3>
+        <p class="drop-subtitle">PDF, DOCX, or TXT project specifications (up to 10MB)</p>
+        <label for="fileInput" class="browse-btn">
+          <i class="fa-solid fa-folder-open"></i> Browse Files
+        </label>
+      </div>
+
+      <div *ngIf="selectedFile" class="file-info-box">
+        <div class="file-icon-badge">
+          <i class="fa-solid fa-file-invoice"></i>
+        </div>
+        <div class="file-details">
+          <h4 class="file-name">{{ selectedFile.name }}</h4>
+          <span class="file-size">{{ (selectedFile.size / 1024 / 1024).toFixed(2) }} MB</span>
+        </div>
+        <button class="remove-btn" (click)="reset()" title="Remove File">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+
+    <button 
+      class="analyze-btn"
+      [disabled]="!selectedFile || analyzing"
+      (click)="analyzeDocument()">
+      <i class="fa-solid" [class.fa-spinner]="analyzing" [class.fa-spin]="analyzing" [class.fa-bolt]="!analyzing"></i>
+      <span>{{ analyzing ? 'Processing AI Multi-Agent Workflows...' : 'Execute Intelligent Task Routing' }}</span>
+    </button>
+  </div>
+
+  <!-- Text Input Mode -->
+  <div *ngIf="!analysisResult && inputMode === 'text'" class="text-input-section glass-panel">
+    <textarea 
+      [(ngModel)]="documentText"
+      placeholder="Paste your project scope, requirement backlog, or task descriptions...
+
+Example:
+PROJECT: Enterprise Portal Refactoring
+1. UI Components Migration - Modernize Angular frontend (120 hrs, High Priority)
+2. Microservices API - Refactor Python backend & DB schemas (160 hrs, Critical)"
+      rows="12"
+      class="text-input glass-input"></textarea>
+
+    <button 
+      class="analyze-btn"
+      [disabled]="!documentText.trim() || analyzing"
+      (click)="analyzeDocument()">
+      <i class="fa-solid" [class.fa-spinner]="analyzing" [class.fa-spin]="analyzing" [class.fa-wand-magic-sparkles]="!analyzing"></i>
+      <span>{{ analyzing ? 'Processing AI Multi-Agent Workflows...' : 'Analyze Requirement Specifications' }}</span>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="analyzing" class="loading-card glass-panel">
+    <div class="pulse-loader">
+      <i class="fa-solid fa-brain"></i>
+    </div>
+    <h3>AI Multi-Agent System Processing</h3>
+    <p class="loading-subtitle">Extracting tasks, evaluating SLA, matching expert skills & optimizing resource cost models...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="error-banner glass-panel">
+    <div class="error-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+    <p>{{ error }}</p>
+    <button class="retry-btn" (click)="reset()">Try Again</button>
+  </div>
+
+  <!-- Analysis Results Dashboard -->
+  <div *ngIf="analysisResult" class="results-dashboard">
+    <div class="results-topbar glass-panel">
+      <div class="status-indicator">
+        <span class="pulse-dot"></span>
+        <h2>Executive Analysis Report</h2>
+      </div>
+
+      <!-- Result View Tabs -->
+      <div class="result-tabs">
+        <button 
+          [class.active]="activeResultTab === 'overview'" 
+          (click)="activeResultTab = 'overview'"
+          class="result-tab-btn">
+          <i class="fa-solid fa-chart-line"></i> Overview & Summary
+        </button>
+        <button 
+          [class.active]="activeResultTab === 'matrix'" 
+          (click)="activeResultTab = 'matrix'"
+          class="result-tab-btn">
+          <i class="fa-solid fa-table-list"></i> Routing Matrix
+        </button>
+        <button 
+          [class.active]="activeResultTab === 'recommendations'" 
+          (click)="activeResultTab = 'recommendations'"
+          class="result-tab-btn">
+          <i class="fa-solid fa-lightbulb"></i> Action Plan & Risk
+        </button>
+      </div>
+
+      <button class="new-analysis-btn" (click)="reset()">
+        <i class="fa-solid fa-rotate-right"></i> New Analysis
+      </button>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div class="stat-grid">
+      <div class="stat-card glass-panel">
+        <div class="stat-icon icon-cyan"><i class="fa-solid fa-list-check"></i></div>
+        <div class="stat-meta">
+          <span class="stat-value">{{ analysisResult.report.analysis_overview.total_tasks }}</span>
+          <span class="stat-label">Total Tasks Extracted</span>
+        </div>
+      </div>
+      <div class="stat-card glass-panel">
+        <div class="stat-icon icon-purple"><i class="fa-solid fa-user-gear"></i></div>
+        <div class="stat-meta">
+          <span class="stat-value">{{ analysisResult.report.analysis_overview.human_assignments }}</span>
+          <span class="stat-label">Human Resources</span>
+        </div>
+      </div>
+      <div class="stat-card glass-panel">
+        <div class="stat-icon icon-emerald"><i class="fa-solid fa-robot"></i></div>
+        <div class="stat-meta">
+          <span class="stat-value">{{ analysisResult.report.analysis_overview.ai_assignments }}</span>
+          <span class="stat-label">AI Agents</span>
+        </div>
+      </div>
+      <div class="stat-card glass-panel">
+        <div class="stat-icon icon-amber"><i class="fa-solid fa-sack-dollar"></i></div>
+        <div class="stat-meta">
+          <span class="stat-value">${{ analysisResult.report.analysis_overview.total_estimated_cost.toFixed(0) }}</span>
+          <span class="stat-label">Est. Total Cost</span>
+        </div>
+      </div>
+      <div class="stat-card glass-panel">
+        <div class="stat-icon icon-blue"><i class="fa-solid fa-clock"></i></div>
+        <div class="stat-meta">
+          <span class="stat-value">{{ analysisResult.report.analysis_overview.total_estimated_effort }}h</span>
+          <span class="stat-label">Total Effort</span>
+        </div>
+      </div>
+      <div class="stat-card glass-panel" [class.risk-alert]="analysisResult.report.analysis_overview.high_risk_tasks > 0">
+        <div class="stat-icon icon-rose"><i class="fa-solid fa-shield-cat"></i></div>
+        <div class="stat-meta">
+          <span class="stat-value">{{ analysisResult.report.analysis_overview.high_risk_tasks }}</span>
+          <span class="stat-label">High Risk Tasks</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: OVERVIEW & EXECUTIVE SUMMARY -->
+    <div class="tab-pane" *ngIf="activeResultTab === 'overview'">
+      <div class="section-card glass-panel">
+        <h3 class="section-title"><i class="fa-solid fa-file-contract text-cyan"></i> Executive Insights Summary</h3>
+        <div class="summary-body" [innerHTML]="analysisResult.report.executive_summary | nl2br"></div>
+      </div>
+    </div>
+
+    <!-- TAB 2: TASK ROUTING MATRIX -->
+    <div class="tab-pane" *ngIf="activeResultTab === 'matrix'">
+      <div class="section-card glass-panel" *ngIf="analysisResult.report.task_assignments.length > 0">
+        <h3 class="section-title"><i class="fa-solid fa-network-wired text-purple"></i> Task Routing Matrix & Resource Match</h3>
+        <div class="table-wrapper">
+          <table class="glass-table">
+            <thead>
+              <tr>
+                <th>Task Name & Specifications</th>
+                <th>Complexity</th>
+                <th>Recommended Resource</th>
+                <th>Resource Type</th>
+                <th>Cost ($)</th>
+                <th>SLA Risk</th>
+                <th>Match Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let assignment of analysisResult.report.task_assignments">
+                <td class="task-cell">
+                  <span class="task-name">{{ assignment.task_name }}</span>
+                  <span class="task-desc">{{ assignment.task_description | slice:0:100 }}...</span>
+                </td>
+                <td>
+                  <span class="pill-badge" [class.pill-high]="assignment.complexity === 'High'">{{ assignment.complexity }}</span>
+                </td>
+                <td class="resource-cell">
+                  <i class="fa-solid" [class.fa-user-check]="assignment.recommended_resource.type !== 'ai'" [class.fa-robot]="assignment.recommended_resource.type === 'ai'" [class.text-cyan]="assignment.recommended_resource.type !== 'ai'" [class.text-emerald]="assignment.recommended_resource.type === 'ai'"></i>
+                  {{ assignment.recommended_resource.name }}
+                </td>
+                <td>
+                  <span class="pill-badge pill-type">{{ assignment.recommended_resource.type }}</span>
+                </td>
+                <td class="cost-cell">${{ assignment.cost_analysis.recommended_cost.toFixed(0) }}</td>
+                <td>
+                  <span class="pill-badge" [class.pill-risk]="assignment.risk_assessment.risk_level === 'High'">{{ assignment.risk_assessment.risk_level }}</span>
+                </td>
+                <td class="score-cell">
+                  <div class="score-bar-wrapper">
+                    <div class="score-bar" [style.width.%]="assignment.recommended_resource.confidence_score"></div>
+                  </div>
+                  <span class="score-text">{{ assignment.recommended_resource.confidence_score }}%</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: RECOMMENDATIONS & NEXT STEPS -->
+    <div class="tab-pane" *ngIf="activeResultTab === 'recommendations'">
+      <div class="grid-2col">
+        <div class="section-card glass-panel" *ngIf="analysisResult.report.detailed_recommendations.length > 0">
+          <h3 class="section-title"><i class="fa-solid fa-lightbulb text-amber"></i> Strategic Recommendations</h3>
+          <ul class="glass-list">
+            <li *ngFor="let rec of analysisResult.report.detailed_recommendations">
+              <i class="fa-solid fa-circle-check text-emerald"></i>
+              <span>{{ rec }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="section-card glass-panel">
+          <h3 class="section-title"><i class="fa-solid fa-diagram-next text-cyan"></i> Actionable Next Steps</h3>
+          <ol class="glass-list numeric">
+            <li *ngFor="let step of analysisResult.report.next_steps; let i = index">
+              <span class="step-num">{{ i + 1 }}</span>
+              <span>{{ step }}</span>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

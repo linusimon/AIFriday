@@ -1,0 +1,71 @@
+<div class="login-page">
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+  
+  <div class="login-card glass-panel">
+    <div class="login-header">
+      <div class="logo-icon">
+        <i class="fa-solid fa-bolt"></i>
+      </div>
+      <h1 class="gradient-text">Task Routing Portal</h1>
+      <p class="subtitle">Enter your credentials to access the AI Glass Dashboard</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-user input-icon"></i>
+          <input
+            type="text"
+            id="username"
+            [(ngModel)]="username"
+            name="username"
+            placeholder="Enter username"
+            required
+            [disabled]="isLoading"
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <i class="fa-solid fa-lock input-icon"></i>
+          <input
+            type="password"
+            id="password"
+            [(ngModel)]="password"
+            name="password"
+            placeholder="Enter password"
+            required
+            [disabled]="isLoading"
+          />
+        </div>
+      </div>
+
+      <div class="error-message" *ngIf="errorMessage">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <button 
+        type="submit" 
+        class="login-button"
+        [disabled]="isLoading"
+      >
+        <span *ngIf="!isLoading">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In to Dashboard
+        </span>
+        <span *ngIf="isLoading">
+          <i class="fa-solid fa-spinner fa-spin"></i> Authenticating...
+        </span>
+      </button>
+
+      <div class="credentials-badge">
+        <i class="fa-solid fa-key"></i>
+        <span>Default credentials: <strong>admin</strong> / <strong>admin123</strong></span>
+      </div>
+    </form>
+  </div>
+</div>

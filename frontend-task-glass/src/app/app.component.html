@@ -1,0 +1,43 @@
+<div class="app-container">
+  <!-- Glass Dark Header Navigation -->
+  <header class="app-header glass-header" *ngIf="authService.isAuthenticated()">
+    <div class="header-left">
+      <div class="brand-badge">
+        <i class="fa-solid fa-bolt brand-icon"></i>
+        <span class="brand-title">TASK<span class="brand-highlight">ROUTING</span></span>
+        <span class="glass-tag">GLASS UI</span>
+      </div>
+    </div>
+    
+    <nav class="main-nav">
+      <a routerLink="/analysis" routerLinkActive="active" class="nav-link">
+        <i class="fa-solid fa-chart-pie nav-icon"></i>
+        <span>Analysis</span>
+      </a>
+      <a routerLink="/chat" routerLinkActive="active" class="nav-link">
+        <i class="fa-solid fa-comments nav-icon"></i>
+        <span>Chat Assistant</span>
+      </a>
+      <a routerLink="/admin" routerLinkActive="active" class="nav-link" *ngIf="authService.isAdmin()">
+        <i class="fa-solid fa-sliders nav-icon"></i>
+        <span>Admin Portal</span>
+      </a>
+    </nav>
+
+    <div class="header-right">
+      <div class="user-chip">
+        <div class="user-avatar">A</div>
+        <span class="user-name">Admin User</span>
+      </div>
+      <button class="logout-btn" (click)="logout()">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="app-main">
+    <router-outlet></router-outlet>
+  </main>
+</div>

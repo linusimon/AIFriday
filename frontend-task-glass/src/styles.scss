@@ -1,0 +1,119 @@
+/* Dark Mode Glassmorphism Theme (Crypto Dashboard Style) */
+:root {
+  --bg-dark: #07090e;
+  --bg-slate: #0f1523;
+  --card-glass: rgba(20, 27, 44, 0.75);
+  --card-glass-hover: rgba(28, 38, 62, 0.9);
+  --border-glass: rgba(255, 255, 255, 0.12);
+  --border-glass-glow: rgba(0, 242, 254, 0.35);
+
+  --accent-cyan: #00f2fe;
+  --accent-blue: #38ef7d;
+  --accent-purple: #a855f7;
+  --accent-pink: #ec4899;
+  --accent-emerald: #10b981;
+  --accent-amber: #fbbf24;
+  --accent-rose: #f43f5e;
+
+  --text-primary: #ffffff;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-light: #ffffff;
+
+  --gradient-cyan-blue: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+  --gradient-purple-pink: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  --gradient-emerald: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  background-color: var(--bg-dark);
+  background-image: 
+    radial-gradient(circle at 10% 10%, rgba(0, 242, 254, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 90% 85%, rgba(168, 85, 247, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.06) 0%, transparent 50%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Force light text color on all native text elements */
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+p, span, div, li, label, td, th {
+  color: var(--text-secondary);
+}
+
+strong, b {
+  color: #ffffff;
+}
+
+/* Glassmorphism Card Utility */
+.glass-panel {
+  background: var(--card-glass);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-glass);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* Neon Gradient Text */
+.gradient-text {
+  background: var(--gradient-cyan-blue);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-purple {
+  background: var(--gradient-purple-pink);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-cyan { color: var(--accent-cyan) !important; }
+.text-purple { color: var(--accent-purple) !important; }
+.text-emerald { color: var(--accent-emerald) !important; }
+.text-amber { color: var(--accent-amber) !important; }
+.text-rose { color: var(--accent-rose) !important; }
+.text-muted { color: var(--text-muted) !important; }
+
+/* Custom Glow Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(7, 9, 14, 0.9);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
+  box-shadow: 0 0 10px var(--accent-cyan);
+}

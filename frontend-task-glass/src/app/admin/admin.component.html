@@ -1,0 +1,176 @@
+<div class="admin-page">
+  <!-- Top Header -->
+  <div class="admin-topbar glass-panel">
+    <div>
+      <h1 class="page-title gradient-text">System Administration Portal</h1>
+      <p class="subtitle">Manage RAG Knowledge Base, SLA Rules, and Expert Analysis Models</p>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="admin-tabs glass-panel">
+    <button 
+      [class.active]="activeTab === 'rag'" 
+      (click)="activeTab = 'rag'"
+      class="tab-btn"
+    >
+      <i class="fa-solid fa-database text-cyan"></i>
+      <span>Knowledge Base & RAG</span>
+    </button>
+    <button 
+      [class.active]="activeTab === 'expert'" 
+      (click)="activeTab = 'expert'"
+      class="tab-btn"
+    >
+      <i class="fa-solid fa-award text-purple"></i>
+      <span>Expert Insights & Rules</span>
+    </button>
+  </div>
+
+  <!-- RAG Management Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'rag'">
+    <div class="stat-row">
+      <div class="stat-card glass-panel" *ngIf="ragStats">
+        <div class="stat-icon icon-cyan"><i class="fa-solid fa-cube"></i></div>
+        <div>
+          <div class="stat-val">{{ ragStats.total_chunks }}</div>
+          <div class="stat-lbl">Indexed Chunks</div>
+        </div>
+      </div>
+      <div class="stat-card glass-panel" *ngIf="ragStats">
+        <div class="stat-icon icon-purple"><i class="fa-solid fa-file-pdf"></i></div>
+        <div>
+          <div class="stat-val">{{ ragStats.total_documents }}</div>
+          <div class="stat-lbl">Knowledge Documents</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Indexed Documents Table -->
+    <div class="section-card glass-panel" *ngIf="ragStats && ragStats.documents && ragStats.documents.length > 0">
+      <h3 class="section-title"><i class="fa-solid fa-folder-tree text-cyan"></i> Indexed RAG Documents</h3>
+      <div class="table-wrapper">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Chunks Count</th>
+              <th>Upload Date</th>
+              <th>File Format</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let doc of ragStats.documents">
+              <td><i class="fa-solid fa-file-lines text-muted me-2"></i> {{ doc.filename }}</td>
+              <td><span class="pill-badge pill-type">{{ doc.chunks }} chunks</span></td>
+              <td>{{ doc.upload_date }}</td>
+              <td><span class="pill-badge">{{ doc.file_type }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Upload Document Form -->
+    <div class="section-card glass-panel">
+      <h3 class="section-title"><i class="fa-solid fa-cloud-arrow-up text-emerald"></i> Upload Document to Knowledge Base</h3>
+      <div class="upload-glass-form">
+        <div class="file-input-wrapper">
+          <input 
+            #ragFileInput
+            type="file" 
+            id="adminFileInput"
+            (change)="onFileSelected($event)"
+            accept=".pdf,.csv,.json,.xml,.txt"
+            [disabled]="isUploading"
+            style="display: none"
+          />
+          <label for="adminFileInput" class="choose-file-btn">
+            <i class="fa-solid fa-folder-plus"></i> Select File
+          </label>
+          <span *ngIf="selectedFile" class="file-selected-name">{{ selectedFile.name }}</span>
+          <span *ngIf="!selectedFile" class="file-selected-name muted">No file chosen (PDF, CSV, JSON, XML, TXT)</span>
+        </div>
+
+        <div class="btn-group">
+          <button 
+            class="btn-gradient" 
+            (click)="uploadDocument()"
+            [disabled]="!selectedFile || isUploading"
+          >
+            <i class="fa-solid" [class.fa-spinner]="isUploading" [class.fa-spin]="isUploading" [class.fa-upload]="!isUploading"></i>
+            <span>{{ isUploading ? 'Embedding & Indexing...' : 'Upload & Ingest' }}</span>
+          </button>
+          
+          <button 
+            class="btn-glass" 
+            (click)="reloadNews()"
+          >
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>Reload Knowledge Vector Store</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="status-msg" *ngIf="uploadMessage" [class.error-msg]="uploadMessage.startsWith('✗')">
+        {{ uploadMessage }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Expert Analysis Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'expert'">
+    <div class="section-card glass-panel">
+      <h3 class="section-title"><i class="fa-solid fa-plus-circle text-cyan"></i> Register Expert Knowledge / Rules</h3>
+      <div class="expert-form-grid">
+        <div class="form-group">
+          <label>Topic / Domain Key</label>
+          <input 
+            type="text" 
+            [(ngModel)]="newAnalysis.key"
+            placeholder="e.g., SLA-HighPriority-Constraint"
+            class="glass-input-field"
+          />
+        </div>
+        <div class="form-group">
+          <label>Expert Insights / Policy Content</label>
+          <textarea 
+            [(ngModel)]="newAnalysis.data"
+            placeholder="Define domain rules, historical resource allocation insights, or team velocity guidelines..."
+            rows="5"
+            class="glass-input-field"
+          ></textarea>
+        </div>
+        <button class="btn-gradient" (click)="addExpertAnalysis()">
+          <i class="fa-solid fa-floppy-disk"></i> Save Expert Knowledge Rule
+        </button>
+      </div>
+
+      <div class="status-msg" *ngIf="expertMessage" [class.error-msg]="expertMessage.startsWith('✗')">
+        {{ expertMessage }}
+      </div>
+    </div>
+
+    <!-- Existing Expert Analysis Database -->
+    <div class="section-card glass-panel">
+      <h3 class="section-title"><i class="fa-solid fa-book-bookmark text-purple"></i> Expert Knowledge Repository</h3>
+      <div class="loading-spinner" *ngIf="isLoadingExperts">
+        <i class="fa-solid fa-spinner fa-spin"></i> Fetching repository...
+      </div>
+      <div class="expert-grid" *ngIf="!isLoadingExperts">
+        <div class="expert-card glass-panel" *ngFor="let analysis of expertAnalyses">
+          <div class="expert-card-header">
+            <span class="expert-key-badge"><i class="fa-solid fa-tag"></i> {{ analysis.key }}</span>
+            <button class="btn-delete" (click)="deleteExpertAnalysis(analysis.id)" title="Delete Rule">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+          <p class="expert-text">{{ analysis.data }}</p>
+          <div class="expert-meta">
+            <span>Created: {{ analysis.created_at | date:'short' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
