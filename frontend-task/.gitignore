@@ -1,9 +1,0 @@
-/dist
-/node_modules
-/.angular
-/out-tsc
-.DS_Store
-/*.log
-__pycache__/
-*.py[cod]
-
