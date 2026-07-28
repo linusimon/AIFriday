@@ -1,4 +1,4 @@
-<div class="chat-page">
+<div class="chat-page" [class.floating-mode]="isFloating">
   <div class="chat-card glass-panel">
     <!-- Chat Header -->
     <div class="chat-header">
@@ -17,8 +17,11 @@
         <button class="voice-toggle-btn" [class.active]="isTtsEnabled" (click)="isTtsEnabled = !isTtsEnabled" title="Toggle Auto Read-Aloud (TTS)">
           <i class="fa-solid" [class.fa-volume-high]="isTtsEnabled" [class.fa-volume-xmark]="!isTtsEnabled"></i>
         </button>
-        <button class="clear-btn" (click)="clearChat()" *ngIf="messages.length > 0">
+        <button class="clear-btn" (click)="clearChat()" *ngIf="messages.length > 0" title="Reset Session">
           <i class="fa-solid fa-rotate-right"></i> Reset Session
+        </button>
+        <button class="close-header-btn" (click)="onCloseClick()" *ngIf="isFloating" title="Close Assistant">
+          <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
     </div>

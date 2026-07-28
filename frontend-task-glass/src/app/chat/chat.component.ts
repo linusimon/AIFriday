@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { ChatService } from '../services/chat.service';
 import { TaskRoutingService } from '../services/task-routing.service';
 import { ChatMessage } from '../models/task-routing.model';
@@ -9,6 +9,9 @@ import { ChatMessage } from '../models/task-routing.model';
   styleUrls: ['./chat.component.css']
 })
 export class ChatComponent implements OnInit {
+  @Input() isFloating: boolean = false;
+  @Output() closeChat = new EventEmitter<void>();
+
   sessionId: string | null = null;
   messages: ChatMessage[] = [];
   userMessage: string = '';
@@ -25,6 +28,10 @@ export class ChatComponent implements OnInit {
   isTtsEnabled: boolean = true;
   isPlayingSpeech: boolean = false;
   private recognition: any = null;
+
+  onCloseClick(): void {
+    this.closeChat.emit();
+  }
 
   constructor(
     private chatService: ChatService,

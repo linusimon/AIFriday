@@ -336,4 +336,26 @@ PROJECT: Enterprise Portal Refactoring
       </div>
     </div>
   </div>
+
+  <!-- Floating Chat Assistant Widget -->
+  <div class="floating-chat-container">
+    <!-- Floating Chat Window Popup -->
+    <div class="floating-chat-window glass-panel" *ngIf="isChatOpen">
+      <app-chat [isFloating]="true" (closeChat)="closeChat()"></app-chat>
+    </div>
+
+    <!-- Floating Action Button (FAB) -->
+    <button class="floating-chat-fab" (click)="toggleChat()" [class.active]="isChatOpen" title="Toggle AI Chat Assistant" *ngIf="!isChatOpen">
+      <div class="fab-icon-wrapper">
+        <i class="fa-solid fa-robot"></i>
+        <span class="fab-badge-pulse"></span>
+      </div>
+      <div class="fab-text">
+        <span class="fab-title">AI Assistant</span>
+        <span class="fab-sub" *ngIf="taskRoutingService.analysisResult">Context Active</span>
+        <span class="fab-sub" *ngIf="!taskRoutingService.analysisResult">Ask Questions</span>
+      </div>
+    </button>
+  </div>
 </div>
+

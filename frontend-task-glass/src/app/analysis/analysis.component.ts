@@ -24,7 +24,38 @@ export class AnalysisComponent implements OnInit {
   agentLogs: { agent: string; status: string; step: number; message: string; timestamp: string }[] = [];
   extractedTasksPreview: any[] = [];
 
-  constructor(private taskRoutingService: TaskRoutingService) {}
+  // Floating Chat Assistant Drawer State
+  isChatOpen: boolean = false;
+  isChatMinimized: boolean = false;
+  isChatExpanded: boolean = false;
+
+  constructor(public taskRoutingService: TaskRoutingService) {}
+
+  toggleChat(): void {
+    if (this.isChatMinimized) {
+      this.isChatMinimized = false;
+      this.isChatOpen = true;
+    } else {
+      this.isChatOpen = !this.isChatOpen;
+    }
+  }
+
+  closeChat(): void {
+    this.isChatOpen = false;
+    this.isChatMinimized = false;
+    this.isChatExpanded = false;
+  }
+
+  toggleMinimize(): void {
+    this.isChatMinimized = !this.isChatMinimized;
+  }
+
+  toggleExpand(): void {
+    this.isChatExpanded = !this.isChatExpanded;
+    if (this.isChatExpanded) {
+      this.isChatMinimized = false;
+    }
+  }
 
   ngOnInit(): void {
     // Restore persistent state from TaskRoutingService upon tab navigation
