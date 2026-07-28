@@ -1,0 +1,12 @@
+I will be using this as the base frontend and backend application for my next hackalton in TCS. 
+Angular front end and python flask backend is required. 
+I would need features like rag, mcp, multiagent parallel processing, chat option with voice and image upload option in addition to the text chat. Need to follow the exact same UI layout and design. 
+The main analysis page needs to show data asynchronously. Login functionality is required. 
+We need to use SQlite database for login and any data enrichment. 
+Data cleansing, data enrichment etc are required before we get the final analysis result. 
+Check the tcs gen ai url to find the best api calls for the requirement. 
+The exact problem statement would change, however we need to use all above features for the new requirement also. 
+Please create a skill document for anti gravity considering all the above so that we can use that skill for the next hackthon question.
+
+
+mcp, multiagent, login, SQlite

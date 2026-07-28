@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCS Hackathon Master Blueprint Skill</title>
+    <!-- GitHub Markdown CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
+    <!-- Highlight.js for Code Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Mermaid.js for Rendering Architecture Diagrams -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+            min-width: 200px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 45px;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .markdown-body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        .mermaid {
+            background-color: #161b22;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+        @media (max-width: 767px) {
+            body {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <article class="markdown-body">
+        <hr />
+<p>name: tcs-hackathon-blueprint
+description: Comprehensive architecture blueprint and implementation guide for TCS Hackathons using Angular 17 Glassmorphism frontend and Python Flask backend. Features RAG (FAISS + TCS GenAI embeddings), 9 MCP servers, 10-agent parallel/sequential multi-agent pipeline, asynchronous analysis streaming, JWT auth with SQLite, voice STT/TTS with PAS 901 adaptive chunking, OCR image upload, and TCS GenAI API integration. Activate this skill whenever building or adapting a TCS hackathon application.</p>
+<hr />
+<h1 id="tcs-hackathon-master-blueprint-angular-17-python-flask-ai-engine">TCS Hackathon Master Blueprint: Angular 17 + Python Flask AI Engine</h1>
+<p>This skill provides a complete, reusable architecture blueprint for TCS Hackathons (AI Friday, Innovate, etc.). It enables rapid adaptation to <strong>any problem statement</strong> while enforcing enterprise-grade AI patterns, UI design consistency, and robust backend engineering.</p>
+<hr />
+<h2 id="1-architecture-overview-core-stack">🏛️ 1. Architecture Overview &amp; Core Stack</h2>
+<div class="mermaid">
+graph TD
+    subgraph Frontend [Angular 17 SPA - Port 4204]
+        GlassUI[Glassmorphism UI System]
+        AuthGuard[JWT Auth Guard & Interceptor]
+        AsyncWorkbench[Async Task Analysis Workbench]
+        ChatPanel[Multi-Modal Chat: Text + Voice + OCR]
+        AdminPortal[Admin Dashboard & Data Management]
+    end
+
+    subgraph Backend [Python Flask Gateway - Port 5004]
+        FlaskRouter[Flask REST API / CORS / JWT]
+        DB[SQLite Database - task_routing.db]
+
+        subgraph Preprocessing
+            DataClean[1. Data Cleansing Agent]
+            DataEnrich[2. Data Enrichment Agent]
+        end
+
+        subgraph Multi-Agent Pipeline
+            Orchestrator[Multi-Agent Pipeline Orchestrator]
+            Agents[10 Parallel/Sequential AI Agents]
+        end
+
+        subgraph MCP Tool Mesh
+            MCPServers[9 Model Context Protocol Servers]
+        end
+
+        subgraph RAG Vector Engine
+            FAISS[FAISS Vector Store]
+            TCSEmbeddings[TCS GenAI Embeddings Service]
+        end
+    end
+
+    GlassUI --> AuthGuard --> FlaskRouter
+    FlaskRouter --> DB
+    FlaskRouter --> DataClean --> DataEnrich --> Orchestrator
+    Orchestrator --> Agents
+    Agents <--> MCPServers <--> DB
+    Agents <--> FAISS <--> TCSEmbeddings
+</div>
+
+<h3 id="key-technical-specifications">Key Technical Specifications</h3>
+<ul>
+<li><strong>Frontend</strong>: Angular 17 SPA with RxJS, HttpClient, Angular Material &amp; Custom Glassmorphism CSS (<code>frontend-task-glass</code>).</li>
+<li><strong>Backend Gateway</strong>: Python 3.10+ Flask REST API (<code>backend-mcp-task</code>) running on port <code>5004</code>.</li>
+<li><strong>Database</strong>: SQLite (<code>data/task_routing.db</code>) with JWT token authentication.</li>
+<li><strong>RAG Engine</strong>: FAISS vector index + <code>langchain_openai.OpenAIEmbeddings</code> adapted for TCS GenAI Lab endpoints.</li>
+<li><strong>MCP Servers</strong>: 9 modular REST/JSON tool servers providing standardized data interfaces.</li>
+<li><strong>AI Agents</strong>: 10 autonomous agents executing sequential document decomposition and parallel resource/cost/risk evaluation.</li>
+<li><strong>Multi-Modal Assistant</strong>: Web Speech API (STT &amp; TTS) with PAS 901 adaptive chunking and Tesseract / OCR image ingestion.</li>
+</ul>
+<hr />
+<h2 id="2-database-authentication-blueprint-sqlite-jwt">🔐 2. Database &amp; Authentication Blueprint (SQLite + JWT)</h2>
+<h3 id="sqlite-schema-backend-mcp-taskdatabasepy">SQLite Schema (<code>backend-mcp-task/database.py</code>)</h3>
+<p>Ensure the following core tables are initialized on startup:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">init_database</span><span class="p">():</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="s2">&quot;data/task_routing.db&quot;</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+    <span class="c1"># 1. Users Table (Authentication)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE IF NOT EXISTS users (</span>
+<span class="s1">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s1">            username TEXT UNIQUE NOT NULL,</span>
+<span class="s1">            password_hash TEXT NOT NULL,</span>
+<span class="s1">            role TEXT DEFAULT &#39;user&#39;,</span>
+<span class="s1">            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 2. Resources Table (Human &amp; AI Agents)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE IF NOT EXISTS resources (</span>
+<span class="s1">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s1">            name TEXT NOT NULL,</span>
+<span class="s1">            type TEXT CHECK(type IN (&#39;human&#39;, &#39;ai_agent&#39;)),</span>
+<span class="s1">            role TEXT NOT NULL,</span>
+<span class="s1">            skills TEXT NOT NULL,  -- JSON string array</span>
+<span class="s1">            hourly_rate REAL NOT NULL,</span>
+<span class="s1">            max_capacity INTEGER NOT NULL,</span>
+<span class="s1">            current_workload INTEGER DEFAULT 0,</span>
+<span class="s1">            availability_status TEXT DEFAULT &#39;available&#39;</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="c1"># 3. Knowledge Base Table (For RAG Enrichment)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE IF NOT EXISTS knowledge_base (</span>
+<span class="s1">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s1">            title TEXT NOT NULL,</span>
+<span class="s1">            document_type TEXT NOT NULL,</span>
+<span class="s1">            content TEXT NOT NULL,</span>
+<span class="s1">            tags TEXT,</span>
+<span class="s1">            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="jwt-authentication-interceptor-angular">JWT Authentication Interceptor (Angular)</h3>
+<p>In <code>frontend-task-glass/src/app/services/auth.interceptor.ts</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Injectable</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@angular/core&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">HttpRequest</span><span class="p">,</span><span class="w"> </span><span class="nx">HttpHandler</span><span class="p">,</span><span class="w"> </span><span class="nx">HttpEvent</span><span class="p">,</span><span class="w"> </span><span class="nx">HttpInterceptor</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;@angular/common/http&#39;</span><span class="p">;</span>
+<span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Observable</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s1">&#39;rxjs&#39;</span><span class="p">;</span>
+
+<span class="kd">@Injectable</span><span class="p">()</span>
+<span class="k">export</span><span class="w"> </span><span class="kd">class</span><span class="w"> </span><span class="nx">JwtInterceptor</span><span class="w"> </span><span class="k">implements</span><span class="w"> </span><span class="nx">HttpInterceptor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="nx">intercept</span><span class="p">(</span><span class="nx">request</span><span class="o">:</span><span class="w"> </span><span class="kt">HttpRequest</span><span class="o">&lt;</span><span class="nx">any</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="nx">next</span><span class="o">:</span><span class="w"> </span><span class="kt">HttpHandler</span><span class="p">)</span><span class="o">:</span><span class="w"> </span><span class="nx">Observable</span><span class="o">&lt;</span><span class="nx">HttpEvent</span><span class="o">&lt;</span><span class="nx">any</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">const</span><span class="w"> </span><span class="nx">token</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">localStorage</span><span class="p">.</span><span class="nx">getItem</span><span class="p">(</span><span class="s1">&#39;token&#39;</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nx">token</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nx">request</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nx">request</span><span class="p">.</span><span class="nx">clone</span><span class="p">({</span>
+<span class="w">        </span><span class="nx">setHeaders</span><span class="o">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nx">Authorization</span><span class="o">:</span><span class="w"> </span><span class="sb">`Bearer </span><span class="si">${</span><span class="nx">token</span><span class="si">}</span><span class="sb">`</span><span class="w"> </span><span class="p">}</span>
+<span class="w">      </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">next</span><span class="p">.</span><span class="nx">handle</span><span class="p">(</span><span class="nx">request</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+
+<hr />
+<h2 id="3-preprocessing-data-cleansing-data-enrichment-pipeline">🧹 3. Preprocessing: Data Cleansing &amp; Data Enrichment Pipeline</h2>
+<p>Before invoking decision synthesis or final classification, raw inputs <strong>must</strong> pass through the preprocessing stage:</p>
+<div class="mermaid">
+graph LR
+    Raw[Raw User Document / Input] --> AgentClean[Data Cleansing Agent]
+    AgentClean --> Cleaned[Normalized & Cleaned Text]
+    Cleaned --> AgentEnrich[Data Enrichment Agent]
+    AgentEnrich <--> RAG[FAISS Vector Store Retrieval]
+    AgentEnrich <--> DB[SQLite Knowledge Base Join]
+    AgentEnrich --> Enriched[Enriched Context Payload]
+    Enriched --> MultiAgentPipeline[10-Agent Task Routing Pipeline]
+</div>
+
+<h3 id="1-data-cleansing-agent-agentsdata_cleansing_agentpy">1. Data Cleansing Agent (<code>agents/data_cleansing_agent.py</code>)</h3>
+<ul>
+<li>Removes boilerplate text, special characters, and formatting artifacts.</li>
+<li>Standardizes date formats, currency symbols, and priority keywords.</li>
+<li>Classifies section headers (e.g., Requirements, Deadlines, Skill Constraints).</li>
+</ul>
+<h3 id="2-data-enrichment-agent-agentsdata_enrichment_agentpy">2. Data Enrichment Agent (<code>agents/data_enrichment_agent.py</code>)</h3>
+<ul>
+<li>Takes cleaned sections and queries the FAISS vector database for relevant company policies, past project metrics, and domain SOPs.</li>
+<li>Joins vector search results with relational metadata from SQLite.</li>
+<li>Attaches retrieved context to the document payload for subsequent agents.</li>
+</ul>
+<hr />
+<h2 id="4-multi-agent-pipeline-asynchronous-execution">🤖 4. Multi-Agent Pipeline &amp; Asynchronous Execution</h2>
+<h3 id="the-10-ai-agents">The 10 AI Agents</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Agent Name</th>
+<th>Primary Responsibility</th>
+<th>Input $\rightarrow$ Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Document Analysis Agent</strong></td>
+<td>Parse structure and extract text sections</td>
+<td>Raw PDF/DOCX/TXT $\rightarrow$ Structural JSON</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Data Cleansing Agent</strong></td>
+<td>Normalize, sanitize, and validate input text</td>
+<td>Structural JSON $\rightarrow$ Cleaned JSON</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Task Classification Agent</strong></td>
+<td>Decompose complex specs into atomic tasks</td>
+<td>Cleaned Text $\rightarrow$ Classified Task Array</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Data Enrichment Agent</strong></td>
+<td>Retrieve contextual domain knowledge via RAG</td>
+<td>Task Array $\rightarrow$ Enriched Tasks + RAG Context</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Resource Matching Agent</strong></td>
+<td>Match required skills with human &amp; AI agents</td>
+<td>Enriched Tasks $\rightarrow$ Ranked Resource Candidates</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Workload Optimization Agent</strong></td>
+<td>Evaluate capacity and balance resource load</td>
+<td>Resource Candidates $\rightarrow$ Workload Allocation Plan</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Cost Optimization Agent</strong></td>
+<td>Calculate human vs AI cost trade-offs</td>
+<td>Allocation Plan $\rightarrow$ Financial Cost Estimate</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Risk &amp; SLA Agent</strong></td>
+<td>Predict SLA compliance and operational risk</td>
+<td>Cost Plan $\rightarrow$ Risk Rating &amp; SLA Matrix</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Decision Synthesis Agent</strong></td>
+<td>Consolidate optimal routing decision</td>
+<td>All Agent Outputs $\rightarrow$ Master Routing Scheme</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Summary Agent</strong></td>
+<td>Generate executive summary &amp; action items</td>
+<td>Master Scheme $\rightarrow$ Executive Briefing</td>
+</tr>
+</tbody>
+</table>
+<h3 id="asynchronous-data-streaming-endpoint-apppy">Asynchronous Data Streaming Endpoint (<code>app.py</code>)</h3>
+<p>To keep the UI responsive, stream progress step-by-step:</p>
+<div class="codehilite"><pre><span></span><code><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/task-routing/analyze-stream&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="nd">@jwt_required</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">analyze_stream</span><span class="p">():</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="n">doc_text</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;document_text&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate_events</span><span class="p">():</span>
+        <span class="n">orchestrator</span> <span class="o">=</span> <span class="n">AgentOrchestrator</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">step_update</span> <span class="ow">in</span> <span class="n">orchestrator</span><span class="o">.</span><span class="n">execute_pipeline_iterative</span><span class="p">(</span><span class="n">doc_text</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="sa">f</span><span class="s2">&quot;data: </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">step_update</span><span class="p">)</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">stream_with_context</span><span class="p">(</span><span class="n">generate_events</span><span class="p">()),</span> <span class="n">content_type</span><span class="o">=</span><span class="s1">&#39;text/event-stream&#39;</span><span class="p">)</span>
+</code></pre></div>
+
+<hr />
+<h2 id="5-model-context-protocol-mcp-server-mesh">🔌 5. Model Context Protocol (MCP) Server Mesh</h2>
+<p>Expose database operations and domain logic via standard MCP endpoints (<code>/api/mcp/&lt;server&gt;/&lt;tool&gt;</code>):</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># mcp_servers/resource_management.py</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Blueprint</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">,</span> <span class="n">request</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">database</span>
+
+<span class="n">resource_server</span> <span class="o">=</span> <span class="n">Blueprint</span><span class="p">(</span><span class="s1">&#39;mcp_resource&#39;</span><span class="p">,</span> <span class="vm">__name__</span><span class="p">)</span>
+
+<span class="nd">@resource_server</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/get_available_resources&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;GET&#39;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_available_resources</span><span class="p">():</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">database</span><span class="o">.</span><span class="n">get_connection</span><span class="p">()</span>
+    <span class="n">resources</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM resources WHERE availability_status = &#39;available&#39;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">resources</span><span class="p">]})</span>
+
+<span class="nd">@resource_server</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/match_skills&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">match_skills</span><span class="p">():</span>
+    <span class="n">req_skills</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;required_skills&#39;</span><span class="p">,</span> <span class="p">[])</span>
+    <span class="c1"># Perform vector or SQL match logic</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;matches&quot;</span><span class="p">:</span> <span class="n">matched_resources</span><span class="p">})</span>
+</code></pre></div>
+
+<hr />
+<h2 id="6-tcs-genai-api-integration-patterns">🌐 6. TCS GenAI API Integration Patterns</h2>
+<h3 id="1-ssl-proxy-bypass-http-configuration">1. SSL Proxy Bypass &amp; HTTP Configuration</h3>
+<p>Inside internal TCS environments, configure <code>httpx</code> or <code>requests</code> to disable SSL verification and set custom timeouts:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">httpx</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">langchain_openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIEmbeddings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Config</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">TCSGenAIEmbeddings</span><span class="p">(</span><span class="n">OpenAIEmbeddings</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">timeout</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">Timeout</span><span class="p">(</span><span class="mf">60.0</span><span class="p">,</span> <span class="n">connect</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span> <span class="n">read</span><span class="o">=</span><span class="mf">120.0</span><span class="p">)</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">verify</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+
+        <span class="n">model_name</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">Config</span><span class="p">,</span> <span class="s2">&quot;EMBEDDING_MODEL&quot;</span><span class="p">,</span> <span class="s2">&quot;azure/genailab-maas-text-embedding-3-large&quot;</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model_name</span><span class="p">,</span>
+            <span class="n">openai_api_key</span><span class="o">=</span><span class="n">Config</span><span class="o">.</span><span class="n">GENAI_API_KEY</span><span class="p">,</span>
+            <span class="n">openai_api_base</span><span class="o">=</span><span class="n">Config</span><span class="o">.</span><span class="n">GENAI_BASE_URL</span><span class="p">,</span>
+            <span class="n">http_client</span><span class="o">=</span><span class="n">client</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+</code></pre></div>
+
+<h3 id="2-env-environment-setup">2. <code>.env</code> Environment Setup</h3>
+<div class="codehilite"><pre><span></span><code><span class="na">HF_TOKEN</span><span class="o">=</span><span class="s">your_tcs_genai_api_key</span>
+<span class="na">JWT_SECRET_KEY</span><span class="o">=</span><span class="s">tcs-ai-friday-hackathon-key</span>
+<span class="na">GENAI_BASE_URL</span><span class="o">=</span><span class="s">https://genailab.tcs.in/</span>
+<span class="na">CHAT_MODEL</span><span class="o">=</span><span class="s">azure/genailab-maas-gpt-4o</span>
+<span class="na">EMBEDDING_MODEL</span><span class="o">=</span><span class="s">azure/genailab-maas-text-embedding-3-large</span>
+</code></pre></div>
+
+<hr />
+<h2 id="7-frontend-multi-modal-chat-adaptive-chunking-pas-901">🗣️ 7. Frontend Multi-Modal Chat &amp; Adaptive Chunking (PAS 901)</h2>
+<h3 id="conversational-voice-ocr-assistant-features">Conversational Voice &amp; OCR Assistant Features</h3>
+<ul>
+<li><strong>Text Chat</strong>: Standard conversational interface querying MCP tools.</li>
+<li><strong>Voice STT / TTS</strong>: Web Speech API integration (<code>webkitSpeechRecognition</code> &amp; <code>speechSynthesis</code>).</li>
+<li><strong>PAS 901 Adaptive Information Chunking</strong>:</li>
+<li>Segments long LLM responses into micro-chunks (1-2 sentences).</li>
+<li>Plays chunk audio with text highlighting.</li>
+<li>Displays confirmation prompts: <em>"Does this make sense? [Next] [Replay] [Simplify]"</em>.</li>
+<li><strong>Image OCR</strong>: Ingests uploaded image files (PNG/JPG), extracts text using Tesseract OCR, and forwards text to the task analysis pipeline.</li>
+</ul>
+<hr />
+<h2 id="8-rapid-hackathon-adaptation-checklist-30-mins">🚀 8. Rapid Hackathon Adaptation Checklist (&lt; 30 Mins)</h2>
+<p>When handed a <strong>new problem statement</strong> at a TCS Hackathon:</p>
+<ol>
+<li><strong>Keep Framework intact</strong>: Leave <code>frontend-task-glass</code> and <code>backend-mcp-task</code> folder structures untouched.</li>
+<li><strong>Update Domain Schema</strong>:</li>
+<li>Edit <code>database.py</code> tables to match the new problem domain (e.g., patients, policies, inventory, claims).</li>
+<li><strong>Customize Agents</strong>:</li>
+<li>Update agent prompts in <code>backend-mcp-task/agents/</code> (e.g., change <code>task_classification_agent.py</code> to <code>medical_triage_agent.py</code> or <code>claim_audit_agent.py</code>).</li>
+<li><strong>Load Domain Knowledge for RAG</strong>:</li>
+<li>Place sample PDF/TXT domain documents in <code>data/</code> and run vector ingestion to update the FAISS index.</li>
+<li><strong>Run Setup Scripts</strong>:</li>
+<li>Backend: <code>cd backend-mcp-task &amp;&amp; setup.bat &amp;&amp; start.bat</code></li>
+<li>Frontend: <code>cd frontend-task-glass &amp;&amp; setup.bat &amp;&amp; start.bat</code></li>
+<li><strong>Verify UI</strong>: Open <code>http://localhost:4204</code> to present the solution with Glassmorphism visuals, multi-agent async progress, charts, and voice assistant.</li>
+</ol>
+    </article>
+
+    <script>
+        hljs.highlightAll();
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'dark',
+            securityLevel: 'loose'
+        });
+    </script>
+</body>
+</html>
