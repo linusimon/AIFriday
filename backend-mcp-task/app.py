@@ -19,6 +19,8 @@ from werkzeug.utils import secure_filename
 from config import Config
 import database
 from rag_service import RAGService
+from guardrails import PrivacyGuardrail
+from agents.orchestrator import AgentOrchestrator, sanitize_for_json
 
 app = Flask(__name__)
 rag_service = RAGService()
@@ -92,6 +94,33 @@ def mcp_status():
             {"name": "analytics", "description": "Analytics Server"}
         ],
         "total_servers": 9
+    }), 200
+
+@app.route('/api/guardrails/sanitize', methods=['POST'])
+def guardrails_sanitize():
+    """Sanitize raw text to remove PII and check for prompt injection"""
+    data = request.get_json() or {}
+    text = data.get("text", "")
+    sanitized_text, rehydrate_map, metrics = PrivacyGuardrail.sanitize(text)
+    is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(sanitized_text)
+    return jsonify({
+        "success": True,
+        "sanitized_text": sanitized_text,
+        "metrics": metrics,
+        "is_allowed": is_allowed,
+        "refusal_message": refusal_msg
+    }), 200
+
+@app.route('/api/guardrails/validate', methods=['POST'])
+def guardrails_validate():
+    """Validate domain scope and prompt injection safety"""
+    data = request.get_json() or {}
+    text = data.get("text", "")
+    is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(text)
+    return jsonify({
+        "success": True,
+        "is_allowed": is_allowed,
+        "refusal_message": refusal_msg
     }), 200
 
 def allowed_file(filename):
@@ -346,6 +375,28 @@ def send_chat_message():
             
         history = chat_sessions[session_id]
         
+        # Privacy Guardrail Scope Validation & PII Sanitization
+        if message:
+            is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(message)
+            if not is_allowed:
+                assistant_entry = {
+                    "role": "assistant",
+                    "content": refusal_msg,
+                    "timestamp": datetime.now().isoformat(),
+                    "guardrail_triggered": True
+                }
+                history.append({"role": "user", "content": message, "timestamp": datetime.now().isoformat()})
+                history.append(assistant_entry)
+                return jsonify({
+                    "success": True,
+                    "message": refusal_msg,
+                    "history": history,
+                    "guardrail_triggered": True
+                }), 200
+
+            sanitized_message, rehydrate_map, pii_metrics = PrivacyGuardrail.sanitize(message)
+            message = sanitized_message
+        
         user_entry = {
             "role": "user",
             "content": message,
@@ -399,16 +450,91 @@ Be concise, professional, helpful, and reference resources or tasks by name wher
         dummy_agent = Agent("ChatAssistantAgent", "Handles chat requests")
         llm_response = dummy_agent.call_llm(system_prompt, user_payload, temperature=0.4)
         
-        history.append({
+        # Natural Language Intent Check for Project Execution Plan Creation
+        plan_created_info = ""
+        msg_lower = (message or "").lower()
+        if any(kw in msg_lower for kw in ["execution plan", "user story", "user stories", "project plan", "create plan", "sprint plan"]):
+            try:
+                from agents.execution_plan_agent import ProjectExecutionAgent
+                exec_agent = ProjectExecutionAgent()
+                plan_dict = exec_agent.generate_plan({"document_text": message}, source="Chat Assistant Query")
+                
+                # Save to database
+                conn = database.get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO project_execution_plans 
+                    (plan_name, description, source, total_user_stories, total_story_points, 
+                     total_effort_hours, total_cost, sprint_count, start_date, target_end_date, 
+                     user_stories_json, timeline_json, team_allocation_json, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                """, (
+                    plan_dict.get('plan_name', 'Chat Generated Plan'),
+                    plan_dict.get('description', ''),
+                    'Chat Assistant Query',
+                    plan_dict.get('total_user_stories', 0),
+                    plan_dict.get('total_story_points', 0),
+                    plan_dict.get('total_effort_hours', 0.0),
+                    plan_dict.get('total_cost', 0.0),
+                    plan_dict.get('sprint_count', 3),
+                    plan_dict.get('start_date', ''),
+                    plan_dict.get('target_end_date', ''),
+                    json.dumps(plan_dict.get('user_stories', [])),
+                    json.dumps(plan_dict.get('timeline', [])),
+                    json.dumps(plan_dict.get('team_allocation', []))
+                ))
+                plan_id = cursor.lastrowid
+                conn.commit()
+                conn.close()
+
+                plan_created_info = f"\n\n---\n### 🚀 Project Execution Plan Generated!\n- **Plan ID**: #{plan_id} ({plan_dict.get('plan_name')})\n- **Agile User Stories**: {plan_dict.get('total_user_stories')} stories ({plan_dict.get('total_story_points')} pts)\n- **Estimated Effort**: {plan_dict.get('total_effort_hours')} hours\n- **Estimated Cost**: ${plan_dict.get('total_cost')}\n- **Timeline**: 3 Sprints ({plan_dict.get('start_date')} to {plan_dict.get('target_end_date')})\n\n👉 You can inspect, filter, and export the full plan breakdown on the **Execution Plans** tab!"
+            except Exception as pe:
+                print("Execution plan auto-generation in chat failed:", pe)
+
+        if plan_created_info:
+            llm_response += plan_created_info
+        
+        from agents.intent_agent import task_intent_agent
+        classified_intent = task_intent_agent.classify(data.get('message', ''))
+
+        guardrail_report = {
+            "checks_performed": [
+                "PII Entity Masking (Emails, IPs, Credentials, PAN, Aadhaar, Phone)",
+                "Prompt Injection Token Neutralization",
+                "Task Routing Domain Scope Validation",
+                f"Dynamic Intent Classification ({classified_intent['intent']})"
+            ],
+            "classified_intent": classified_intent,
+            "is_allowed": True,
+            "masked_entities": rehydrate_map if 'rehydrate_map' in locals() else {},
+            "metrics": pii_metrics if 'pii_metrics' in locals() else {"total": 0},
+            "action_taken": f"Masked {pii_metrics.get('total', 0)} sensitive PII token(s) and validated input domain scope." if 'pii_metrics' in locals() and pii_metrics.get('total', 0) > 0 else "Zero sensitive PII tokens detected; input domain scope validated."
+        }
+
+        assistant_entry = {
             "role": "assistant",
             "content": llm_response,
-            "timestamp": datetime.now().isoformat()
-        })
+            "timestamp": datetime.now().isoformat(),
+            "guardrail_report": guardrail_report,
+            "input_data": {
+                "user_query": data.get('message', ''),
+                "sanitized_query": message,
+                "classified_intent": classified_intent,
+                "rag_policies_retrieved": rag_context
+            }
+        }
+        history.append(assistant_entry)
         
         return jsonify({
             "success": True,
             "response": llm_response,
-            "tool_calls": []
+            "history": history,
+            "guardrail_report": guardrail_report,
+            "input_data": {
+                "user_query": data.get('message', ''),
+                "sanitized_query": message,
+                "rag_policies_retrieved": rag_context
+            }
         }), 200
     except Exception as e:
         import traceback
@@ -707,7 +833,7 @@ def analyze_task_routing():
         print("[API] Starting task routing analysis...")
         
         # Import all agents
-        from agents.orchestrator import AgentOrchestrator
+        from agents.orchestrator import AgentOrchestrator, sanitize_for_json
         from agents.document_analysis_agent import DocumentAnalysisAgent
         from agents.data_cleansing_agent import DataCleansingAgent
         from agents.data_enrichment_agent import DataEnrichmentAgent
@@ -757,25 +883,63 @@ def analyze_task_routing():
             summary_agent
         ]
         
+        # Privacy Guardrail Sanitization & Validation
+        sanitized_doc_text, rehydrate_map, pii_metrics = PrivacyGuardrail.sanitize(document_text or "")
+        is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(sanitized_doc_text)
+
+        guardrail_report = {
+            "checks_performed": [
+                "PII Entity Masking (Emails, IPs, Credentials, PAN, Aadhaar, Phone)",
+                "Prompt Injection Token Neutralization",
+                "Task Routing Domain Scope Validation"
+            ],
+            "is_allowed": is_allowed,
+            "refusal_message": refusal_msg,
+            "masked_entities": rehydrate_map,
+            "metrics": pii_metrics,
+            "action_taken": f"Masked {pii_metrics.get('total', 0)} sensitive PII token(s) and validated input domain scope." if pii_metrics.get('total', 0) > 0 else "Zero sensitive PII tokens detected; input domain scope validated."
+        }
+
+        execution_steps = []
+        def sync_callback(agent_name, status, result, step_info, input_payload=None):
+            if status == "completed":
+                execution_steps.append({
+                    "agent": agent_name,
+                    "status": status,
+                    "step": step_info.get("step", 0),
+                    "input_data": input_payload,
+                    "result": sanitize_for_json(result)
+                })
+
         # Execute orchestration
         initial_context = {
-            'document_text': document_text,
-            'document_path': document_path
+            'document_text': sanitized_doc_text or document_text,
+            'raw_document_text': document_text,
+            'document_path': document_path,
+            '_guardrail_report': guardrail_report
         }
         
-        print("[API] Executing agent orchestration...")
-        result_context = orchestrator.execute_custom_flow(
+        print("[API] Executing agent orchestration with dynamic intent dispatching...")
+        result_context = orchestrator.execute_dynamic_intent_flow(
             initial_context,
-            sequential_agents,
-            parallel_agents,
-            final_agents
+            text_query=document_text,
+            callback=sync_callback
         )
         
         print("[API] Agent orchestration complete")
         
+        # Extract classified intent
+        classified_intent = result_context.get('_classified_intent', {})
+        guardrail_report['classified_intent'] = classified_intent
+        
         # Extract final report
         summary_result = result_context.get('SummaryAgent', {})
         final_report = summary_result.get('final_report', {})
+        final_report['execution_audit_log'] = {
+            "guardrail_report": guardrail_report,
+            "execution_steps": execution_steps
+        }
+        final_report = sanitize_for_json(final_report)
         
         # Store results in database
         conn = database.get_db_connection()
@@ -851,20 +1015,49 @@ def analyze_task_routing_stream():
         import threading
         
         event_queue = queue.Queue()
+        execution_steps = []
 
-        def agent_callback(agent_name, status, result, step_info):
+        # Run Privacy Guardrail on incoming document text
+        sanitized_doc_text, rehydrate_map, pii_metrics = PrivacyGuardrail.sanitize(document_text or "")
+        is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(sanitized_doc_text)
+
+        guardrail_report = {
+            "checks_performed": [
+                "PII Entity Masking (Emails, IPs, Credentials, PAN, Aadhaar, Phone)",
+                "Prompt Injection Token Neutralization",
+                "Task Routing Domain Scope Validation"
+            ],
+            "is_allowed": is_allowed,
+            "refusal_message": refusal_msg,
+            "masked_entities": rehydrate_map,
+            "metrics": pii_metrics,
+            "action_taken": f"Masked {pii_metrics.get('total', 0)} sensitive PII token(s) and validated input domain scope." if pii_metrics.get('total', 0) > 0 else "Zero sensitive PII tokens detected; input domain scope validated."
+        }
+
+        def agent_callback(agent_name, status, result, step_info, input_payload=None):
+            clean_result = sanitize_for_json(result)
+            if status == "completed":
+                execution_steps.append({
+                    "agent": agent_name,
+                    "status": status,
+                    "step": step_info.get("step", 0),
+                    "input_data": input_payload,
+                    "result": clean_result
+                })
             event_queue.put({
                 "type": "progress",
                 "agent": agent_name,
                 "status": status,
-                "result": result,
+                "result": clean_result,
                 "step": step_info.get("step", 0),
-                "total_steps": step_info.get("total_steps", 7)
+                "total_steps": step_info.get("total_steps", 7),
+                "input_data": input_payload,
+                "guardrail_report": guardrail_report
             })
 
         def run_pipeline():
             try:
-                from agents.orchestrator import AgentOrchestrator
+                from agents.orchestrator import AgentOrchestrator, sanitize_for_json
                 from agents.document_analysis_agent import DocumentAnalysisAgent
                 from agents.data_cleansing_agent import DataCleansingAgent
                 from agents.data_enrichment_agent import DataEnrichmentAgent
@@ -889,41 +1082,34 @@ def analyze_task_routing_stream():
                 
                 orchestrator = AgentOrchestrator()
                 
-                sequential_agents = [
-                    doc_analysis,
-                    data_cleansing,
-                    data_enrichment,
-                    task_classification,
-                    resource_matching
-                ]
-                parallel_agents = [
-                    workload_optimization,
-                    cost_optimization,
-                    risk_sla
-                ]
-                final_agents = [
-                    decision_agent,
-                    summary_agent
-                ]
-                
                 initial_context = {
-                    'document_text': document_text,
-                    'document_path': document_path
+                    'document_text': sanitized_doc_text or document_text,
+                    'raw_document_text': document_text,
+                    'document_path': document_path,
+                    '_guardrail_report': guardrail_report
                 }
                 
-                result_context = orchestrator.execute_custom_flow(
+                result_context = orchestrator.execute_dynamic_intent_flow(
                     initial_context,
-                    sequential_agents,
-                    parallel_agents,
-                    final_agents,
+                    text_query=document_text or "",
                     callback=agent_callback
                 )
                 
+                classified_intent = result_context.get('_classified_intent', {})
+                guardrail_report['classified_intent'] = classified_intent
+                
                 summary_result = result_context.get('SummaryAgent', {})
                 final_report = summary_result.get('final_report', {})
+                
+                # Attach execution audit log to final report
+                final_report['execution_audit_log'] = {
+                    "guardrail_report": guardrail_report,
+                    "execution_steps": execution_steps
+                }
+                final_report = sanitize_for_json(final_report)
+
                 decisions = result_context.get('DecisionAgent', {}).get('final_decisions', [])
                 
-                # DB Storage
                 try:
                     conn = database.get_db_connection()
                     cursor = conn.cursor()
@@ -970,6 +1156,141 @@ def analyze_task_routing_stream():
             yield f"data: {json.dumps(item)}\n\n"
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
+
+# ==========================================
+# Project Execution Plan Endpoints
+# ==========================================
+
+@app.route('/api/execution-plans/generate', methods=['POST'])
+def generate_execution_plan():
+    """Generate and save a new Project Execution Plan"""
+    try:
+        data = request.get_json() or {}
+        source = data.get('source', 'Task Routing Analysis')
+        input_context = data.get('input_context', {})
+        document_text = data.get('document_text', '')
+
+        if document_text and not input_context.get('document_text'):
+            input_context['document_text'] = document_text
+
+        from agents.execution_plan_agent import ProjectExecutionAgent
+        agent = ProjectExecutionAgent()
+        plan_dict = agent.generate_plan(input_context, source=source)
+
+        # Save to SQLite database
+        conn = database.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO project_execution_plans 
+            (plan_name, description, source, total_user_stories, total_story_points, 
+             total_effort_hours, total_cost, sprint_count, start_date, target_end_date, 
+             user_stories_json, timeline_json, team_allocation_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        """, (
+            plan_dict.get('plan_name', 'Project Execution Plan'),
+            plan_dict.get('description', ''),
+            plan_dict.get('source', source),
+            plan_dict.get('total_user_stories', 0),
+            plan_dict.get('total_story_points', 0),
+            plan_dict.get('total_effort_hours', 0.0),
+            plan_dict.get('total_cost', 0.0),
+            plan_dict.get('sprint_count', 3),
+            plan_dict.get('start_date', ''),
+            plan_dict.get('target_end_date', ''),
+            json.dumps(plan_dict.get('user_stories', [])),
+            json.dumps(plan_dict.get('timeline', [])),
+            json.dumps(plan_dict.get('team_allocation', []))
+        ))
+        plan_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        plan_dict['plan_id'] = plan_id
+        return jsonify({"success": True, "plan": plan_dict}), 201
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/execution-plans', methods=['GET'])
+def get_execution_plans():
+    """Retrieve all saved Project Execution Plans"""
+    try:
+        conn = database.get_db_connection()
+        rows = conn.execute("""
+            SELECT plan_id, plan_name, description, source, total_user_stories, 
+                   total_story_points, total_effort_hours, total_cost, sprint_count, 
+                   start_date, target_end_date, user_stories_json, timeline_json, 
+                   team_allocation_json, created_at 
+            FROM project_execution_plans 
+            ORDER BY created_at DESC
+        """).fetchall()
+        conn.close()
+
+        plans = []
+        for r in rows:
+            p = dict(r)
+            try:
+                p['user_stories'] = json.loads(p.get('user_stories_json') or '[]')
+            except Exception:
+                p['user_stories'] = []
+            try:
+                p['timeline'] = json.loads(p.get('timeline_json') or '[]')
+            except Exception:
+                p['timeline'] = []
+            try:
+                p['team_allocation'] = json.loads(p.get('team_allocation_json') or '[]')
+            except Exception:
+                p['team_allocation'] = []
+            plans.append(p)
+
+        return jsonify({"success": True, "plans": plans, "count": len(plans)}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/execution-plans/<int:plan_id>', methods=['GET'])
+def get_execution_plan_by_id(plan_id):
+    """Retrieve details of a specific Project Execution Plan"""
+    try:
+        conn = database.get_db_connection()
+        row = conn.execute("""
+            SELECT plan_id, plan_name, description, source, total_user_stories, 
+                   total_story_points, total_effort_hours, total_cost, sprint_count, 
+                   start_date, target_end_date, user_stories_json, timeline_json, 
+                   team_allocation_json, created_at 
+            FROM project_execution_plans 
+            WHERE plan_id = ?
+        """, (plan_id,)).fetchone()
+        conn.close()
+
+        if not row:
+            return jsonify({"success": False, "error": "Execution plan not found"}), 404
+
+        p = dict(row)
+        p['user_stories'] = json.loads(p.get('user_stories_json') or '[]')
+        p['timeline'] = json.loads(p.get('timeline_json') or '[]')
+        p['team_allocation'] = json.loads(p.get('team_allocation_json') or '[]')
+        return jsonify({"success": True, "plan": p}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/execution-plans/<int:plan_id>', methods=['DELETE'])
+def delete_execution_plan(plan_id):
+    """Delete a Project Execution Plan"""
+    try:
+        conn = database.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM project_execution_plans WHERE plan_id = ?", (plan_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"success": True, "message": f"Execution plan {plan_id} deleted successfully"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 if __name__ == '__main__':
     print(f"Starting Intelligent Task Routing System on port {Config.FLASK_PORT}...")

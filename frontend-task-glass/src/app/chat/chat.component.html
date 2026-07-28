@@ -52,7 +52,7 @@
 
     <!-- Messages Container -->
     <div class="messages-container">
-      <div *ngFor="let message of messages" 
+      <div *ngFor="let message of messages; let i = index" 
            class="message-bubble-wrapper" 
            [class.user-wrapper]="message.role === 'user'"
            [class.assistant-wrapper]="message.role === 'assistant'">
@@ -76,6 +76,54 @@
           </div>
 
           <div class="bubble-text">{{ message.content }}</div>
+
+          <!-- Collapsed Guardrail & Audit Log Bar -->
+          <div *ngIf="message.guardrail_report" class="chat-guardrail-accordion mt-2 pt-2 border-t border-slate-700/50">
+            <div class="guardrail-trigger-btn flex items-center justify-between" (click)="toggleLog(i)" style="cursor: pointer;">
+              <span class="trigger-label text-xs font-semibold text-cyan">
+                <i class="fa-solid fa-shield-halved"></i> Privacy Guardrail & Audit Log
+                <span class="pill-badge pill-amber text-xs ml-1" *ngIf="message.guardrail_report.metrics">
+                  {{ message.guardrail_report.metrics.total }} Masked
+                </span>
+              </span>
+              <i class="fa-solid text-xs text-slate-400" [class.fa-chevron-up]="expandedLogs[i]" [class.fa-chevron-down]="!expandedLogs[i]"></i>
+            </div>
+
+            <!-- Expandable Log Drawer -->
+            <div class="chat-log-drawer glass-panel-sm p-3 mt-2" *ngIf="expandedLogs[i]">
+              <div class="log-status-row flex flex-wrap gap-2 text-xs mb-2">
+                <span class="pill-badge pill-purple" *ngIf="message.guardrail_report.classified_intent">
+                  <i class="fa-solid fa-brain"></i> Intent: {{ message.guardrail_report.classified_intent.intent }}
+                </span>
+                <span class="pill-badge pill-emerald"><i class="fa-solid fa-check"></i> Scope Check</span>
+                <span class="pill-badge pill-emerald"><i class="fa-solid fa-shield"></i> Injection Check</span>
+                <span class="pill-badge pill-amber">{{ message.guardrail_report.metrics ? message.guardrail_report.metrics.total : 0 }} PII Masked</span>
+              </div>
+              <p class="text-xs text-cyan mb-2"><i class="fa-solid fa-circle-info"></i> {{ message.guardrail_report.action_taken }}</p>
+
+              <!-- Masked PII Redaction Mapping Table -->
+              <div *ngIf="getObjectKeys(message.guardrail_report.masked_entities).length > 0" class="masked-table-box mb-2">
+                <div class="text-xs font-bold text-amber mb-1"><i class="fa-solid fa-user-shield"></i> Redacted PII Mapping:</div>
+                <table class="glass-table-sm text-xs">
+                  <thead>
+                    <tr><th>Placeholder Tag</th><th>Original Value (Redacted)</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let k of getObjectKeys(message.guardrail_report.masked_entities)">
+                      <td><code class="text-cyan">{{ k }}</code></td>
+                      <td><span class="text-amber">{{ message.guardrail_report.masked_entities[k] }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Sanitized Query & RAG Payload -->
+              <div *ngIf="message.input_data" class="chat-payload-box mt-2">
+                <div class="text-xs font-bold text-cyan mb-1"><i class="fa-solid fa-right-to-bracket"></i> Input Payload to Assistant LLM:</div>
+                <pre class="json-code-block text-xs max-h-40 overflow-y-auto">{{ formatJson(message.input_data) }}</pre>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -151,6 +199,9 @@
       <div class="quick-questions">
         <span class="quick-title"><i class="fa-solid fa-bolt text-cyan"></i> Prompts:</span>
         <div class="chips-flex">
+          <button class="quick-chip bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-semibold" (click)="generatePlanFromChat()">
+            <i class="fa-solid fa-list-check"></i> Generate Execution Plan
+          </button>
           <button class="quick-chip" (click)="userMessage = 'Why was this resource recommended?'; sendMessage()">
             Why this resource?
           </button>

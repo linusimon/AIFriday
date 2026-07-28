@@ -128,6 +128,23 @@ export interface AnalysisResult {
       underutilized_resources: number;
       recommendations: string[];
     };
+    execution_audit_log?: {
+      guardrail_report?: {
+        checks_performed: string[];
+        is_allowed: boolean;
+        refusal_message: string;
+        masked_entities: { [key: string]: string };
+        metrics: { emails: number; ips: number; secrets: number; financial: number; total: number };
+        action_taken: string;
+      };
+      execution_steps?: {
+        agent: string;
+        status: string;
+        step: number;
+        input_data?: any;
+        result?: any;
+      }[];
+    };
   };
 }
 
@@ -171,6 +188,19 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   image?: string;
+  guardrail_report?: {
+    checks_performed: string[];
+    classified_intent?: { intent: string; confidence: number; description?: string };
+    is_allowed: boolean;
+    masked_entities: { [key: string]: string };
+    metrics: { emails: number; ips: number; secrets: number; financial: number; total: number };
+    action_taken: string;
+  };
+  input_data?: {
+    user_query?: string;
+    sanitized_query?: string;
+    rag_policies_retrieved?: string;
+  };
 }
 
 export interface ChatSession {
@@ -199,4 +229,57 @@ export interface VoiceRequest {
 export interface OCRRequest {
   image_data: string;
   format: string;
+}
+
+export interface UserStory {
+  story_id: string;
+  title: string;
+  description: string;
+  acceptance_criteria?: string[];
+  priority: 'High' | 'Medium' | 'Low';
+  complexity: 'High' | 'Medium' | 'Low';
+  assigned_to: string;
+  assigned_type: 'Human' | 'AI Agent';
+  story_points: number;
+  estimated_effort_hours: number;
+  estimated_cost: number;
+  sprint: string;
+  status: string;
+}
+
+export interface SprintMilestone {
+  sprint_number: number;
+  sprint_name: string;
+  duration_weeks: number;
+  start_date: string;
+  end_date: string;
+  key_deliverables: string[];
+  story_ids: string[];
+}
+
+export interface TeamAllocation {
+  name: string;
+  type: string;
+  role: string;
+  assigned_stories_count: number;
+  total_hours: number;
+  total_cost: number;
+}
+
+export interface ProjectExecutionPlan {
+  plan_id: number;
+  plan_name: string;
+  description: string;
+  source: string;
+  total_user_stories: number;
+  total_story_points: number;
+  total_effort_hours: number;
+  total_cost: number;
+  sprint_count: number;
+  start_date: string;
+  target_end_date: string;
+  user_stories: UserStory[];
+  timeline: SprintMilestone[];
+  team_allocation?: TeamAllocation[];
+  created_at: string;
 }

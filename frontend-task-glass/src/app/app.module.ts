@@ -10,6 +10,7 @@ import { LoginComponent } from './login/login.component';
 import { AdminComponent } from './admin/admin.component';
 import { AnalysisComponent } from './analysis/analysis.component';
 import { ChatComponent } from './chat/chat.component';
+import { ExecutionPlansComponent } from './execution-plans/execution-plans.component';
 
 import { ApiService } from './services/api.service';
 import { AuthService } from './services/auth.service';
@@ -25,6 +26,7 @@ import { Nl2brPipe } from './pipes/nl2br.pipe';
     AdminComponent,
     AnalysisComponent,
     ChatComponent,
+    ExecutionPlansComponent,
     Nl2brPipe
   ],
   imports: [
