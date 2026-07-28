@@ -20,7 +20,62 @@ import {
 export class TaskRoutingService {
   private apiUrl = '/api';
 
+  // ========== Persistent Analysis State Across Tabs ==========
+  public selectedFile: File | null = null;
+  public documentText: string = '';
+  public inputMode: 'file' | 'text' = 'file';
+  public activeResultTab: 'overview' | 'matrix' | 'recommendations' = 'overview';
+  public analyzing: boolean = false;
+  public analysisResult: AnalysisResult | null = null;
+  public error: string | null = null;
+  public currentStep: number = 0;
+  public totalSteps: number = 7;
+  public progressPercent: number = 0;
+  public currentAgent: string = '';
+  public agentLogs: { agent: string; status: string; step: number; message: string; timestamp: string }[] = [];
+  public extractedTasksPreview: any[] = [];
+  public analysisTimestamp: number = 0;
+
   constructor(private http: HttpClient) {}
+
+  getAnalysisContextSummary(): string | null {
+    if (!this.analysisResult) return null;
+    let summary = `DOCUMENT ANALYSIS SUMMARY:\n`;
+    if (this.selectedFile?.name) {
+      summary += `File Name: ${this.selectedFile.name}\n`;
+    }
+    if (this.analysisResult.task_count) {
+      summary += `Extracted Tasks Count: ${this.analysisResult.task_count}\n`;
+    }
+    const rep: any = this.analysisResult.report;
+    if (typeof rep === 'string') {
+      summary += `Report Summary:\n${rep.substring(0, 2000)}\n`;
+    } else if (rep) {
+      if (rep.executive_summary) {
+        summary += `Executive Summary:\n${rep.executive_summary}\n`;
+      }
+      if (rep.analysis_overview) {
+        const ov = rep.analysis_overview;
+        summary += `Overview: Total Tasks=${ov.total_tasks}, Human=${ov.human_assignments}, AI=${ov.ai_assignments}, Total Cost=$${ov.total_estimated_cost}, High Risk=${ov.high_risk_tasks}\n`;
+      }
+    }
+    return summary;
+  }
+
+  resetAnalysisState(): void {
+    this.selectedFile = null;
+    this.documentText = '';
+    this.analysisResult = null;
+    this.error = null;
+    this.analyzing = false;
+    this.currentStep = 0;
+    this.progressPercent = 0;
+    this.currentAgent = '';
+    this.agentLogs = [];
+    this.extractedTasksPreview = [];
+    this.analysisTimestamp = 0;
+  }
+
 
   // ========== Task Analysis ==========
   

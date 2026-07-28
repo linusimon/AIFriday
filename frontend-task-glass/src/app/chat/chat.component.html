@@ -23,6 +23,15 @@
       </div>
     </div>
 
+    <!-- Active Analysis Context Banner -->
+    <div class="analysis-context-banner" *ngIf="activeAnalysisFileName">
+      <div class="context-info">
+        <i class="fa-solid fa-file-contract text-cyan"></i>
+        <span>Active Document Context: <strong>{{ activeAnalysisFileName }}</strong></span>
+      </div>
+      <span class="context-badge"><i class="fa-solid fa-brain"></i> Analysis Context Active</span>
+    </div>
+
     <!-- Active Speech Banner -->
     <div class="speech-active-banner" *ngIf="isPlayingSpeech">
       <div class="speech-info">

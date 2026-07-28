@@ -100,6 +100,44 @@ export class ChatService {
 
   // ========== Local State Management ==========
 
+  private activeSessionId: string | null = null;
+  private activeMessages: ChatMessage[] = [];
+  private loadedAnalysisTimestamp: number = 0;
+
+  getActiveSessionId(): string | null {
+    return this.activeSessionId;
+  }
+
+  getActiveMessages(): ChatMessage[] {
+    return this.activeMessages;
+  }
+
+  getLoadedAnalysisTimestamp(): number {
+    return this.loadedAnalysisTimestamp;
+  }
+
+  setActiveSession(sessionId: string, messages: ChatMessage[], analysisTimestamp: number = 0): void {
+    this.activeSessionId = sessionId;
+    this.activeMessages = messages;
+    this.loadedAnalysisTimestamp = analysisTimestamp;
+    this.setCurrentSession({
+      session_id: sessionId,
+      messages: messages
+    });
+  }
+
+  addMessageToActiveSession(message: ChatMessage): void {
+    this.activeMessages.push(message);
+    this.addMessageToCurrentSession(message);
+  }
+
+  clearActiveSession(): void {
+    this.activeSessionId = null;
+    this.activeMessages = [];
+    this.loadedAnalysisTimestamp = 0;
+    this.clearCurrentSession();
+  }
+
   setCurrentSession(session: ChatSession): void {
     this.currentSessionSubject.next(session);
   }
@@ -120,3 +158,4 @@ export class ChatService {
     this.currentSessionSubject.next(null);
   }
 }
+

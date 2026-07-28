@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ChatService } from '../services/chat.service';
+import { TaskRoutingService } from '../services/task-routing.service';
 import { ChatMessage } from '../models/task-routing.model';
 
 @Component({
@@ -13,6 +14,7 @@ export class ChatComponent implements OnInit {
   userMessage: string = '';
   loading: boolean = false;
   error: string | null = null;
+  activeAnalysisFileName: string | null = null;
 
   // Image & Vision Attachments
   attachedImageBase64: string | null = null;
@@ -24,10 +26,30 @@ export class ChatComponent implements OnInit {
   isPlayingSpeech: boolean = false;
   private recognition: any = null;
 
-  constructor(private chatService: ChatService) {}
+  constructor(
+    private chatService: ChatService,
+    public taskRoutingService: TaskRoutingService
+  ) {}
 
   ngOnInit(): void {
-    this.startNewSession();
+    const activeSessionId = this.chatService.getActiveSessionId();
+    const activeMessages = this.chatService.getActiveMessages();
+    const currentAnalysisTimestamp = this.taskRoutingService.analysisTimestamp;
+    const loadedAnalysisTimestamp = this.chatService.getLoadedAnalysisTimestamp();
+
+    if (this.taskRoutingService.analysisResult) {
+      this.activeAnalysisFileName = this.taskRoutingService.selectedFile?.name || 'Uploaded Document';
+    } else {
+      this.activeAnalysisFileName = null;
+    }
+
+    if (activeSessionId && activeMessages.length > 0 && currentAnalysisTimestamp === loadedAnalysisTimestamp) {
+      this.sessionId = activeSessionId;
+      this.messages = activeMessages;
+    } else {
+      this.startNewSession();
+    }
+
     this.initSpeechRecognition();
   }
 
@@ -124,14 +146,31 @@ export class ChatComponent implements OnInit {
 
   startNewSession(): void {
     this.loading = true;
-    this.chatService.startSession().subscribe({
+    const analysisContext = this.taskRoutingService.getAnalysisContextSummary();
+    const fileName = this.taskRoutingService.selectedFile?.name || (this.taskRoutingService.analysisResult ? 'Uploaded Document' : null);
+    this.activeAnalysisFileName = fileName;
+
+    const contextPayload = analysisContext ? { document_analysis: analysisContext } : undefined;
+
+    this.chatService.startSession(contextPayload).subscribe({
       next: (response: any) => {
         this.sessionId = response.session_id;
+
+        let initialGreeting = "Hello! I'm your AI Task Routing Assistant. I can analyze architecture diagrams, speak responses aloud, process voice inputs, and help answer questions about resource assignments, SLA risks, and cost models. How can I help you today?";
+
+        if (fileName && this.taskRoutingService.analysisResult) {
+          initialGreeting = `Hello! I have loaded the document analysis details for **${fileName}** (${this.taskRoutingService.analysisResult.task_count || 0} tasks identified). I am ready to provide assistance, answer questions, or explain routing decisions, SLA risks, and cost recommendations based on this analysis. How can I help you today?`;
+        }
+
         this.messages = [{
           role: 'assistant',
-          content: 'Hello! I\'m your AI Task Routing Assistant. I can analyze architecture diagrams, speak responses aloud, process voice inputs, and help answer questions about resource assignments, SLA risks, and cost models. How can I help you today?',
+          content: initialGreeting,
           timestamp: new Date()
         }];
+
+        if (this.sessionId) {
+          this.chatService.setActiveSession(this.sessionId, this.messages, this.taskRoutingService.analysisTimestamp);
+        }
         this.loading = false;
       },
       error: (err: any) => {
@@ -158,12 +197,21 @@ export class ChatComponent implements OnInit {
     };
     
     this.messages.push(userMsg);
+    if (this.sessionId) {
+      this.chatService.setActiveSession(this.sessionId, this.messages, this.taskRoutingService.analysisTimestamp);
+    }
     this.userMessage = '';
     this.clearImageAttachment();
     this.loading = true;
     this.scrollToBottom();
 
-    this.chatService.sendMessage(this.sessionId, userText, userImage || undefined).subscribe({
+    let apiMessage = userText;
+    const analysisSummary = this.taskRoutingService.getAnalysisContextSummary();
+    if (analysisSummary && this.messages.filter(m => m.role === 'user').length === 1) {
+      apiMessage = `[Document Analysis Context:\n${analysisSummary}]\n\nUser Question: ${userText}`;
+    }
+
+    this.chatService.sendMessage(this.sessionId, apiMessage, userImage || undefined).subscribe({
       next: (response: any) => {
         const assistantMsg: ChatMessage = {
           role: 'assistant',
@@ -171,6 +219,9 @@ export class ChatComponent implements OnInit {
           timestamp: new Date()
         };
         this.messages.push(assistantMsg);
+        if (this.sessionId) {
+          this.chatService.setActiveSession(this.sessionId, this.messages, this.taskRoutingService.analysisTimestamp);
+        }
         this.loading = false;
         this.scrollToBottom();
         this.speak(response.response);
@@ -187,6 +238,7 @@ export class ChatComponent implements OnInit {
     if (this.sessionId) {
       this.chatService.clearSession(this.sessionId).subscribe();
     }
+    this.chatService.clearActiveSession();
     this.startNewSession();
   }
 
