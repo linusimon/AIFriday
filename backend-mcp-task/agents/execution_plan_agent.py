@@ -22,13 +22,35 @@ class ProjectExecutionAgent(Agent):
             description="Generates Agile User Stories, resource assignments, effort/cost estimates, and sprint timelines"
         )
 
+    def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute method for AgentOrchestrator integration
+        """
+        self.log("Generating project execution plan...")
+        plan = self.generate_plan(context, source="Task Routing Analysis")
+        return {
+            "execution_plan": plan,
+            "status": "success"
+        }
+
     def generate_plan(self, input_context: Dict[str, Any], source: str = "Task Routing Analysis") -> Dict[str, Any]:
         """
         Generate execution plan from context or document summary
         """
         doc_text = input_context.get('document_text') or input_context.get('raw_document_text') or ""
         summary = input_context.get('SummaryAgent', {}).get('executive_summary') or doc_text
-        tasks = input_context.get('DocumentAnalysisAgent', {}).get('tasks', [])
+        tasks = self.get_tasks(input_context)
+        
+        # If no tasks are present in context, but document_text is available, run DocumentAnalysisAgent on demand
+        if not tasks and doc_text:
+            try:
+                from agents.document_analysis_agent import DocumentAnalysisAgent
+                doc_agent = DocumentAnalysisAgent()
+                doc_res = doc_agent.execute(input_context)
+                tasks = doc_res.get('extracted_tasks', [])
+            except Exception as de:
+                self.log(f"Dynamic document analysis for plan generation failed: {de}")
+
         decisions = input_context.get('DecisionAgent', {}).get('final_decisions', [])
 
         # Fetch active DB resources and AI agents for realistic assignment
@@ -96,7 +118,7 @@ Rules for output JSON format (Return ONLY valid JSON matching this exact structu
   ]
 }}"""
 
-        user_content = f"Project Context:\n{summary}\n\nTask Count: {len(tasks)}\nDecisions:\n{json.dumps(decisions, indent=2)[:2000]}"
+        user_content = f"Project Context:\n{summary[:2000]}\n\nTask Details ({len(tasks)} tasks):\n{json.dumps(tasks, indent=2)[:3000]}\n\nRouting Decisions:\n{json.dumps(decisions, indent=2)[:3000]}"
 
         try:
             raw_response = self.call_llm(system_prompt, user_content, temperature=0.3, response_format='json')
@@ -113,6 +135,10 @@ Rules for output JSON format (Return ONLY valid JSON matching this exact structu
 
             plan_dict = json.loads(clean_json)
             plan_dict['source'] = source
+
+            if not plan_dict.get('user_stories') or 'Undefined Project' in plan_dict.get('plan_name', '') or plan_dict.get('total_user_stories', 0) == 0:
+                return self._build_heuristic_fallback_plan(tasks, decisions, resources_list, agents_list, source)
+
             return self._recalculate_totals(plan_dict)
         except Exception as e:
             print("[ProjectExecutionAgent] LLM generation failed/fallback triggered:", e)

@@ -29,9 +29,8 @@ class CostOptimizationAgent(Agent):
         """
         self.log("Starting cost optimization...")
         
-        # Get classified tasks
-        task_classification = context.get('TaskClassificationAgent', {})
-        tasks = task_classification.get('classified_tasks', [])
+        # Get tasks from context
+        tasks = self.get_tasks(context)
         
         # Get resource recommendations
         resource_matching = context.get('ResourceMatchingAgent', {})

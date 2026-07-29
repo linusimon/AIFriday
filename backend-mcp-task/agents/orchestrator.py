@@ -242,15 +242,18 @@ class AgentOrchestrator:
         final_agents = []
 
         if intent == 'EXECUTION_PLAN_GENERATION':
-            final_agents = [ProjectExecutionAgent()]
+            sequential_agents = [DocumentAnalysisAgent()]
+            final_agents = [ProjectExecutionAgent(), SummaryAgent()]
 
         elif intent == 'RESOURCE_MATCHING_INQUIRY':
             sequential_agents = [DocumentAnalysisAgent(), ResourceMatchingAgent()]
-            parallel_agents = [WorkloadOptimizationAgent()]
+            parallel_agents = [WorkloadOptimizationAgent(), CostOptimizationAgent(), RiskSLAAgent()]
+            final_agents = [DecisionAgent(), SummaryAgent()]
 
         elif intent == 'COST_SLA_OPTIMIZATION':
-            parallel_agents = [CostOptimizationAgent(), RiskSLAAgent()]
-            final_agents = [SummaryAgent()]
+            sequential_agents = [DocumentAnalysisAgent(), ResourceMatchingAgent()]
+            parallel_agents = [WorkloadOptimizationAgent(), CostOptimizationAgent(), RiskSLAAgent()]
+            final_agents = [DecisionAgent(), SummaryAgent()]
 
         elif intent == 'POLICY_FAQ_INQUIRY' or intent == 'GENERAL_ASSISTANT_CONVERSATION':
             final_agents = [SummaryAgent()]

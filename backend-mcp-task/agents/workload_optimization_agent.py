@@ -114,8 +114,7 @@ class WorkloadOptimizationAgent(Agent):
             })
         
         # Recommend AI agents for simple tasks to free up human resources
-        task_classification = context.get('TaskClassificationAgent', {})
-        classified_tasks = task_classification.get('classified_tasks', [])
+        classified_tasks = self.get_tasks(context)
         low_complexity_count = len([t for t in classified_tasks if t.get('complexity') == 'Low'])
         
         if low_complexity_count > 0 and overloaded:

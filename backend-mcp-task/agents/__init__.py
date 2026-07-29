@@ -18,6 +18,36 @@ class Agent:
         self.llm_api_url = f"{Config.GENAI_BASE_URL}v1/chat/completions"
         self.api_key = Config.GENAI_API_KEY
     
+    def get_tasks(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Extract tasks from whichever upstream agent produced them in the context.
+        """
+        if not context:
+            return []
+        
+        # 1. TaskClassificationAgent
+        classification = context.get('TaskClassificationAgent', {})
+        if isinstance(classification, dict) and classification.get('classified_tasks'):
+            return classification.get('classified_tasks')
+            
+        # 2. DataEnrichmentAgent
+        enrichment = context.get('DataEnrichmentAgent', {})
+        if isinstance(enrichment, dict) and enrichment.get('enriched_tasks'):
+            return enrichment.get('enriched_tasks')
+            
+        # 3. DataCleansingAgent
+        cleansing = context.get('DataCleansingAgent', {})
+        if isinstance(cleansing, dict) and cleansing.get('cleansed_tasks'):
+            return cleansing.get('cleansed_tasks')
+            
+        # 4. DocumentAnalysisAgent
+        doc_analysis = context.get('DocumentAnalysisAgent', {})
+        if isinstance(doc_analysis, dict) and doc_analysis.get('extracted_tasks'):
+            return doc_analysis.get('extracted_tasks')
+            
+        # 5. Fallback directly in context
+        return context.get('tasks', [])
+
     def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute the agent's main logic.
