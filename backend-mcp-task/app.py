@@ -103,12 +103,14 @@ def guardrails_sanitize():
     text = data.get("text", "")
     sanitized_text, rehydrate_map, metrics = PrivacyGuardrail.sanitize(text)
     is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(sanitized_text)
+    eval_res = PrivacyGuardrail.evaluate_input(text, user_id=data.get('user_id', 'anonymous'))
     return jsonify({
         "success": True,
         "sanitized_text": sanitized_text,
         "metrics": metrics,
         "is_allowed": is_allowed,
-        "refusal_message": refusal_msg
+        "refusal_message": refusal_msg,
+        "evaluation": eval_res
     }), 200
 
 @app.route('/api/guardrails/validate', methods=['POST'])
@@ -117,10 +119,22 @@ def guardrails_validate():
     data = request.get_json() or {}
     text = data.get("text", "")
     is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(text)
+    eval_res = PrivacyGuardrail.evaluate_input(text, user_id=data.get('user_id', 'anonymous'))
     return jsonify({
         "success": True,
         "is_allowed": is_allowed,
-        "refusal_message": refusal_msg
+        "refusal_message": refusal_msg,
+        "evaluation": eval_res
+    }), 200
+
+@app.route('/api/guardrails/audit_logs', methods=['GET'])
+def get_guardrail_audit_logs():
+    """Get recent audit logs from database"""
+    limit = int(request.args.get('limit', 50))
+    logs = PrivacyGuardrail.get_audit_logs(limit=limit)
+    return jsonify({
+        "success": True,
+        "audit_logs": logs
     }), 200
 
 def allowed_file(filename):
@@ -379,19 +393,47 @@ def send_chat_message():
         if message:
             is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(message)
             if not is_allowed:
+                guardrail_report = {
+                    "checks_performed": [
+                        "Prompt Injection Detection & Token Neutralization",
+                        "Jailbreak Prevention",
+                        "Toxicity & Content Moderation",
+                        "PII Entity Masking (Emails, IPs, Credentials, PAN, Aadhaar, Phone)",
+                        "SQL Injection Protection",
+                        "Rate Limiting & Domain Scope Validation"
+                    ],
+                    "is_allowed": False,
+                    "refusal_message": refusal_msg,
+                    "masked_entities": {},
+                    "metrics": {"total": 0},
+                    "action_taken": f"Blocked: {refusal_msg}"
+                }
                 assistant_entry = {
                     "role": "assistant",
                     "content": refusal_msg,
                     "timestamp": datetime.now().isoformat(),
-                    "guardrail_triggered": True
+                    "guardrail_triggered": True,
+                    "guardrail_report": guardrail_report,
+                    "input_data": {
+                        "user_query": data.get('message', ''),
+                        "sanitized_query": message,
+                        "rag_policies_retrieved": "N/A - Blocked by Security Guardrail"
+                    }
                 }
                 history.append({"role": "user", "content": message, "timestamp": datetime.now().isoformat()})
                 history.append(assistant_entry)
                 return jsonify({
                     "success": True,
+                    "response": refusal_msg,
                     "message": refusal_msg,
                     "history": history,
-                    "guardrail_triggered": True
+                    "guardrail_triggered": True,
+                    "guardrail_report": guardrail_report,
+                    "input_data": {
+                        "user_query": data.get('message', ''),
+                        "sanitized_query": message,
+                        "rag_policies_retrieved": "N/A - Blocked by Security Guardrail"
+                    }
                 }), 200
 
             sanitized_message, rehydrate_map, pii_metrics = PrivacyGuardrail.sanitize(message)
@@ -883,21 +925,24 @@ def analyze_task_routing():
             summary_agent
         ]
         
-        # Privacy Guardrail Sanitization & Validation
+        # Privacy Guardrail Security Validation & Sanitization
+        is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(document_text or "")
         sanitized_doc_text, rehydrate_map, pii_metrics = PrivacyGuardrail.sanitize(document_text or "")
-        is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(sanitized_doc_text)
 
         guardrail_report = {
             "checks_performed": [
+                "Prompt Injection Detection & Token Neutralization",
+                "Jailbreak Prevention",
+                "Toxicity & Content Moderation",
                 "PII Entity Masking (Emails, IPs, Credentials, PAN, Aadhaar, Phone)",
-                "Prompt Injection Token Neutralization",
-                "Task Routing Domain Scope Validation"
+                "SQL Injection Protection",
+                "Rate Limiting & Domain Scope Validation"
             ],
             "is_allowed": is_allowed,
             "refusal_message": refusal_msg,
             "masked_entities": rehydrate_map,
             "metrics": pii_metrics,
-            "action_taken": f"Masked {pii_metrics.get('total', 0)} sensitive PII token(s) and validated input domain scope." if pii_metrics.get('total', 0) > 0 else "Zero sensitive PII tokens detected; input domain scope validated."
+            "action_taken": f"Blocked: {refusal_msg}" if not is_allowed else (f"Masked {pii_metrics.get('total', 0)} sensitive PII token(s) and validated input domain scope." if pii_metrics.get('total', 0) > 0 else "Zero sensitive PII tokens detected; security & input domain scope validated.")
         }
 
         execution_steps = []
@@ -1018,20 +1063,23 @@ def analyze_task_routing_stream():
         execution_steps = []
 
         # Run Privacy Guardrail on incoming document text
+        is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(document_text or "")
         sanitized_doc_text, rehydrate_map, pii_metrics = PrivacyGuardrail.sanitize(document_text or "")
-        is_allowed, refusal_msg = PrivacyGuardrail.validate_scope(sanitized_doc_text)
 
         guardrail_report = {
             "checks_performed": [
+                "Prompt Injection Detection & Token Neutralization",
+                "Jailbreak Prevention",
+                "Toxicity & Content Moderation",
                 "PII Entity Masking (Emails, IPs, Credentials, PAN, Aadhaar, Phone)",
-                "Prompt Injection Token Neutralization",
-                "Task Routing Domain Scope Validation"
+                "SQL Injection Protection",
+                "Rate Limiting & Domain Scope Validation"
             ],
             "is_allowed": is_allowed,
             "refusal_message": refusal_msg,
             "masked_entities": rehydrate_map,
             "metrics": pii_metrics,
-            "action_taken": f"Masked {pii_metrics.get('total', 0)} sensitive PII token(s) and validated input domain scope." if pii_metrics.get('total', 0) > 0 else "Zero sensitive PII tokens detected; input domain scope validated."
+            "action_taken": f"Blocked: {refusal_msg}" if not is_allowed else (f"Masked {pii_metrics.get('total', 0)} sensitive PII token(s) and validated input domain scope." if pii_metrics.get('total', 0) > 0 else "Zero sensitive PII tokens detected; security & input domain scope validated.")
         }
 
         def agent_callback(agent_name, status, result, step_info, input_payload=None):

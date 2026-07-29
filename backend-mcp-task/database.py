@@ -201,6 +201,19 @@ def init_database():
         )
     ''')
     
+    # Create AuditLogs table for GDPR Guardrail evaluation audit trail
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            log_id TEXT PRIMARY KEY,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            customer_id TEXT,
+            action TEXT NOT NULL,
+            trigger_type TEXT NOT NULL,
+            details TEXT,
+            status TEXT NOT NULL
+        )
+    ''')
+    
     conn.commit()
     
     # Check if admin user exists, if not create it

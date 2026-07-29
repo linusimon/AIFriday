@@ -1,12 +1,71 @@
+"""
+Enterprise Guardrails Engine for AIFriday Task Routing Application.
+Implements GDPR recommendations & Security rules matching Reference Application:
+1. Prompt Injection Detection
+2. Jailbreak Prevention
+3. Toxicity & Content Moderation
+4. Sensitive Info & PII Masking (Credit Cards, SSN, PAN, Aadhaar, Email, Phone, Passports, IPs, Credentials)
+5. SQL Injection Protection
+6. Rate Limiting (20 req/min per user/IP)
+7. Hallucination Verification
+8. Domain Scope Validation
+9. Database Audit Trail Logging (audit_logs table)
+10. Input Evaluation API
+11. Rehydration & Anonymization
+"""
+
 import re
-from typing import Dict, Tuple, List
+import time
+from typing import Dict, Tuple, List, Optional
+import database
 
 class PrivacyGuardrail:
     """
-    Local Data Privacy Guardrail Layer for AIFriday Task Routing Application.
-    Ensures zero PII, internal IP addresses, user credentials, or financial data
-    are sent to external or cloud LLM APIs.
+    Enterprise Guardrails System implementing GDPR recommendations & Security rules:
+    - Prompt Injection Detection
+    - Jailbreak Prevention
+    - Toxicity & Content Moderation
+    - Sensitive Info & PII Masking
+    - SQL Injection Protection
+    - Hallucination Verification
+    - Rate Limiting
+    - Audit Logging
     """
+
+    PROMPT_INJECTION_PATTERNS = [
+        r"(?i)ignore previous instructions",
+        r"(?i)ignore all prior prompts",
+        r"(?i)system prompt",
+        r"(?i)you are now dan",
+        r"(?i)developer mode",
+        r"(?i)bypass rules",
+        r"(?i)override safety",
+        r"(?i)disregard guidelines",
+        r"(?i)override instructions"
+    ]
+
+    JAILBREAK_PATTERNS = [
+        r"(?i)do anything now",
+        r"(?i)pretend you have no rules",
+        r"(?i)jailbroken",
+        r"(?i)act as an unfiltered ai",
+        r"(?i)ignore privacy policy"
+    ]
+
+    TOXIC_PATTERNS = [
+        r"(?i)\b(scam|fraudster|cheat|hack|hate|kill|idiot|stupid|abuse|bitch)\b"
+    ]
+
+    SQL_INJECTION_PATTERNS = [
+        r"(?i)union\s+select",
+        r"(?i)drop\s+table",
+        r"(?i)delete\s+from",
+        r"(?i)insert\s+into",
+        r"(?i)exec\s*\(",
+        r"(?i)1=1",
+        r"--;",
+        r"(?i)or\s+'1'='1'"
+    ]
 
     # Regex patterns for sensitive entity scrubbing
     IPV4_PATTERN = r'\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b'
@@ -14,15 +73,69 @@ class PrivacyGuardrail:
     EMAIL_PATTERN = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
     CREDENTIAL_PATTERN = r'(?i)\b(?:password|passwd|secret|api[_-]?key|bearer|token)\s*[:=]\s*["\']?([^\s"\'};]+)'
     SSN_FINANCIAL_PATTERN = r'\b(?:\d[ -]*?){13,16}\b'  # Credit cards / SSNs
+    SSN_FORMATTED_PATTERN = r'\b\d{3}-\d{2}-\d{4}\b'     # Formatted SSN xxx-xx-xxxx
     PAN_CARD_PATTERN = r'(?i)\b[A-Z]{5}\d{4}[A-Z]\b'     # Indian PAN Card Number
     AADHAAR_PATTERN = r'\b\d{4}[ -]?\d{4}[ -]?\d{4}\b'   # Indian Aadhaar Number
     PASSPORT_PATTERN = r'(?i)\b[A-Z][0-9]{7}\b'          # Passport Number
     PHONE_PATTERN = r'\b(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b' # Phone Numbers
 
+    # Rate limiting tracking dictionary: {user_id_or_ip: [timestamps]}
+    request_timestamps: Dict[str, List[float]] = {}
+
+    @classmethod
+    def mask_pii(cls, text: str) -> Tuple[str, List[str]]:
+        """
+        Masks PII (Credit Cards, SSN, Phone Numbers, Email Addresses, PAN, Aadhaar, IPs, Passports).
+        Returns (masked_text, list_of_detected_types).
+        """
+        if not text:
+            return "", []
+
+        masked = text
+        detected = []
+
+        # Credit Card (13-19 digits)
+        if re.search(r'\b(?:\d[ -]*?){13,19}\b', masked):
+            masked = re.sub(r'\b(?:\d[ -]*?){13,19}\b', '[MASKED_CREDIT_CARD]', masked)
+            detected.append('CREDIT_CARD')
+
+        # SSN (xxx-xx-xxxx)
+        if re.search(cls.SSN_FORMATTED_PATTERN, masked):
+            masked = re.sub(cls.SSN_FORMATTED_PATTERN, '[MASKED_SSN]', masked)
+            detected.append('SSN')
+
+        # Email
+        if re.search(cls.EMAIL_PATTERN, masked):
+            masked = re.sub(cls.EMAIL_PATTERN, '[MASKED_EMAIL]', masked)
+            detected.append('EMAIL')
+
+        # Phone Number
+        if re.search(cls.PHONE_PATTERN, masked):
+            masked = re.sub(cls.PHONE_PATTERN, '[MASKED_PHONE]', masked)
+            detected.append('PHONE')
+
+        # Indian PAN Card
+        if re.search(cls.PAN_CARD_PATTERN, masked):
+            masked = re.sub(cls.PAN_CARD_PATTERN, '[MASKED_PAN]', masked)
+            detected.append('PAN_CARD')
+
+        # Aadhaar
+        if re.search(cls.AADHAAR_PATTERN, masked):
+            masked = re.sub(cls.AADHAAR_PATTERN, '[MASKED_AADHAAR]', masked)
+            detected.append('AADHAAR')
+
+        # IP Addresses
+        if re.search(cls.IPV4_PATTERN, masked) or re.search(cls.IPV6_PATTERN, masked):
+            masked = re.sub(cls.IPV4_PATTERN, '[MASKED_IP]', masked)
+            masked = re.sub(cls.IPV6_PATTERN, '[MASKED_IP]', masked)
+            detected.append('IP_ADDRESS')
+
+        return masked, list(set(detected))
+
     @classmethod
     def sanitize(cls, raw_text: str) -> Tuple[str, Dict[str, str], Dict[str, int]]:
         """
-        Scrubs sensitive PII from raw_text.
+        Scrubs sensitive PII from raw_text with placeholder mapping.
         Returns:
             - sanitized_text (str): Safe text ready to be passed to LLM
             - rehydrate_map (dict): Mapping from anonymized placeholders back to original values
@@ -117,24 +230,129 @@ class PrivacyGuardrail:
         """
         Detects and neutralizes prompt injection override tokens.
         """
-        injection_keywords = [
-            r"(?i)ignore previous instructions",
-            r"(?i)system prompt:",
-            r"(?i)you are now a",
-            r"(?i)override instructions"
-        ]
         sanitized = text
-        for kw in injection_keywords:
+        for kw in cls.PROMPT_INJECTION_PATTERNS:
             sanitized = re.sub(kw, "[BLOCKED_PROMPT_INJECTION_ATTEMPT]", sanitized)
         return sanitized
 
     @classmethod
+    def evaluate_input(cls, user_text: str, user_id: str = 'anonymous') -> dict:
+        """
+        Runs comprehensive input evaluation before feeding to agents:
+        - Rate Limiting (20 req/min)
+        - Prompt Injection Detection
+        - Jailbreak Prevention
+        - Toxicity Detection
+        - SQL Injection Protection
+        - PII Masking
+        - Audit Logging
+        """
+        text_lower = user_text.lower()
+        masked_text, pii_detected = cls.mask_pii(user_text)
+
+        # 1. Rate Limiting Check (Max 20 requests per minute)
+        now = time.time()
+        user_ts = cls.request_timestamps.get(user_id, [])
+        user_ts = [t for t in user_ts if now - t < 60]
+        if len(user_ts) >= 20:
+            cls._log_audit(user_id, "RATE_LIMIT_EXCEEDED", "SECURITY", "Rate limit exceeded (20 req/min)", "BLOCKED")
+            return {
+                'passed': False,
+                'reason': 'Rate limit exceeded. Please wait a moment before sending more queries.',
+                'masked_text': masked_text,
+                'pii_detected': pii_detected,
+                'flag': 'RATE_LIMIT'
+            }
+        user_ts.append(now)
+        cls.request_timestamps[user_id] = user_ts
+
+        # 2. Prompt Injection Detection
+        for pattern in cls.PROMPT_INJECTION_PATTERNS:
+            if re.search(pattern, text_lower):
+                cls._log_audit(user_id, "PROMPT_INJECTION_DETECTED", "GUARDRAIL", f"Matched pattern: {pattern}", "BLOCKED")
+                return {
+                    'passed': False,
+                    'reason': 'I cannot process prompts that attempt to override system safety rules or developer instructions.',
+                    'masked_text': masked_text,
+                    'pii_detected': pii_detected,
+                    'flag': 'PROMPT_INJECTION'
+                }
+
+        # 3. Jailbreak Prevention
+        for pattern in cls.JAILBREAK_PATTERNS:
+            if re.search(pattern, text_lower):
+                cls._log_audit(user_id, "JAILBREAK_ATTEMPT_DETECTED", "GUARDRAIL", f"Matched pattern: {pattern}", "BLOCKED")
+                return {
+                    'passed': False,
+                    'reason': 'Jailbreak attempt detected. Access blocked per GDPR & Security policy.',
+                    'masked_text': masked_text,
+                    'pii_detected': pii_detected,
+                    'flag': 'JAILBREAK'
+                }
+
+        # 4. Toxicity Detection
+        for pattern in cls.TOXIC_PATTERNS:
+            if re.search(pattern, text_lower):
+                cls._log_audit(user_id, "TOXICITY_DETECTED", "GUARDRAIL", f"Matched pattern: {pattern}", "FLAGGED")
+                return {
+                    'passed': False,
+                    'reason': 'Please maintain professional and respectful language in interactions.',
+                    'masked_text': masked_text,
+                    'pii_detected': pii_detected,
+                    'flag': 'TOXICITY'
+                }
+
+        # 5. SQL Injection Protection
+        for pattern in cls.SQL_INJECTION_PATTERNS:
+            if re.search(pattern, text_lower):
+                cls._log_audit(user_id, "SQL_INJECTION_ATTEMPT", "SECURITY", f"Matched pattern: {pattern}", "BLOCKED")
+                return {
+                    'passed': False,
+                    'reason': 'Malicious query input pattern detected.',
+                    'masked_text': masked_text,
+                    'pii_detected': pii_detected,
+                    'flag': 'SQL_INJECTION'
+                }
+
+        # Log clean or masked execution
+        status = "MASKED" if pii_detected else "PASSED"
+        cls._log_audit(user_id, "INPUT_GUARDRAIL_EVAL", "GUARDRAIL", f"PII: {pii_detected}", status)
+
+        return {
+            'passed': True,
+            'reason': 'Guardrails passed successfully.',
+            'masked_text': masked_text,
+            'pii_detected': pii_detected,
+            'flag': None
+        }
+
+    @classmethod
+    def detect_hallucination(cls, generated_response: str, context_chunks: List[str]) -> bool:
+        """
+        Basic hallucination check: verifies if numerical values/dates in response exist in context.
+        """
+        if not context_chunks:
+            return False
+        response_numbers = set(re.findall(r'\b\d+\b', generated_response))
+        context_text = " ".join(context_chunks)
+        context_numbers = set(re.findall(r'\b\d+\b', context_text))
+        
+        unsupported_numbers = response_numbers - context_numbers
+        unsupported = [n for n in unsupported_numbers if len(n) > 2 and n != '2026']
+        return len(unsupported) > 2
+
+    @classmethod
     def validate_scope(cls, text: str) -> Tuple[bool, str]:
         """
-        Validates whether user input satisfies safety policies and domain scope rules.
+        Validates whether user input satisfies safety policies, security rules, and domain scope rules.
         """
         if not text:
             return True, ""
+
+        # 1. Comprehensive Security Guardrails Check (Prompt Injection, Jailbreak, Toxicity, SQL Injection, Rate Limit)
+        eval_res = cls.evaluate_input(text)
+        if not eval_res['passed']:
+            return False, f"🛡️ Guardrail Alert ({eval_res['flag']}): {eval_res['reason']}"
 
         # 1. Prompt Injection Check
         if "[BLOCKED_PROMPT_INJECTION_ATTEMPT]" in text or re.search(r"(?i)ignore previous instructions", text):
@@ -186,3 +404,39 @@ class PrivacyGuardrail:
             )
 
         return True, ""
+
+    @classmethod
+    def _log_audit(cls, user_id: str, action: str, trigger_type: str, details: str, status: str):
+        """
+        Logs security & guardrail evaluation events into database audit_logs table.
+        """
+        try:
+            conn = database.get_db_connection()
+            cursor = conn.cursor()
+            log_id = f"LOG-{int(time.time() * 1000)}"
+            cursor.execute('''
+                INSERT INTO audit_logs (log_id, customer_id, action, trigger_type, details, status)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (log_id, user_id, action, trigger_type, details, status))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"[Guardrail Audit Log Error]: {e}")
+
+    @classmethod
+    def get_audit_logs(cls, limit: int = 50) -> List[Dict]:
+        """
+        Retrieve recent audit logs from database.
+        """
+        try:
+            conn = database.get_db_connection()
+            rows = conn.execute("SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT ?", (limit,)).fetchall()
+            conn.close()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            print(f"[Guardrail Get Audit Logs Error]: {e}")
+            return []
+
+# Create GuardrailsEngine alias for 100% compatibility with Reference Application imports
+GuardrailsEngine = PrivacyGuardrail
+guardrails_engine = PrivacyGuardrail()

@@ -264,9 +264,10 @@ export class ChatComponent implements OnInit {
 
     this.chatService.sendMessage(this.sessionId, apiMessage, userImage || undefined).subscribe({
       next: (response: any) => {
+        const textContent = response.response || response.message || 'No response content returned.';
         const assistantMsg: ChatMessage = {
           role: 'assistant',
-          content: response.response,
+          content: textContent,
           timestamp: new Date(),
           guardrail_report: response.guardrail_report,
           input_data: response.input_data
@@ -277,7 +278,7 @@ export class ChatComponent implements OnInit {
         }
         this.loading = false;
         this.scrollToBottom();
-        this.speak(response.response);
+        this.speak(textContent);
       },
       error: (err: any) => {
         this.error = 'Failed to send message. Please try again.';
