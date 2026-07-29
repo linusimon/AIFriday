@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { TaskRoutingService } from '../services/task-routing.service';
 import { AnalysisResult } from '../models/task-routing.model';
 
@@ -11,25 +12,76 @@ export class AnalysisComponent implements OnInit {
   selectedFile: File | null = null;
   documentText: string = '';
   analyzing: boolean = false;
+  generatingPlan: boolean = false;
   analysisResult: AnalysisResult | null = null;
   error: string | null = null;
   inputMode: 'file' | 'text' = 'file';
-  activeResultTab: 'overview' | 'matrix' | 'recommendations' = 'overview';
+  activeResultTab: 'overview' | 'matrix' | 'recommendations' | 'audit_log' = 'overview';
 
   // Streaming & Async Progress State
   currentStep: number = 0;
   totalSteps: number = 7;
   progressPercent: number = 0;
   currentAgent: string = '';
-  agentLogs: { agent: string; status: string; step: number; message: string; timestamp: string }[] = [];
+  agentLogs: { agent: string; status: string; step: number; message: string; timestamp: string; input_data?: any; result?: any }[] = [];
   extractedTasksPreview: any[] = [];
+
+  // Collapsed Audit Log & Accordion State
+  isAuditLogOpen: boolean = false;
+  expandedSteps: { [key: number]: boolean } = {};
 
   // Floating Chat Assistant Drawer State
   isChatOpen: boolean = false;
   isChatMinimized: boolean = false;
   isChatExpanded: boolean = false;
 
-  constructor(public taskRoutingService: TaskRoutingService) {}
+  constructor(
+    public taskRoutingService: TaskRoutingService,
+    private router: Router
+  ) {}
+
+  generateExecutionPlanFromAnalysis(): void {
+    if (!this.analysisResult) return;
+    this.generatingPlan = true;
+    const docName = this.selectedFile?.name || 'Document Analysis';
+    
+    this.taskRoutingService.generateExecutionPlan({
+      source: `Task Routing Analysis (${docName})`,
+      input_context: this.analysisResult,
+      document_text: this.documentText
+    }).subscribe({
+      next: (res: any) => {
+        this.generatingPlan = false;
+        this.router.navigate(['/execution-plans']);
+      },
+      error: (err: any) => {
+        this.generatingPlan = false;
+        this.error = 'Failed to generate project execution plan.';
+        console.error(err);
+      }
+    });
+  }
+
+  toggleAuditLog(): void {
+    this.isAuditLogOpen = !this.isAuditLogOpen;
+  }
+
+  toggleStep(index: number): void {
+    this.expandedSteps[index] = !this.expandedSteps[index];
+  }
+
+  getObjectKeys(obj: any): string[] {
+    return obj ? Object.keys(obj) : [];
+  }
+
+  formatJson(obj: any): string {
+    if (!obj) return '';
+    try {
+      return JSON.stringify(obj, null, 2);
+    } catch {
+      return String(obj);
+    }
+  }
 
   toggleChat(): void {
     if (this.isChatMinimized) {
@@ -136,7 +188,7 @@ export class AnalysisComponent implements OnInit {
     this.syncStateToService();
   }
 
-  setActiveResultTab(tab: 'overview' | 'matrix' | 'recommendations'): void {
+  setActiveResultTab(tab: 'overview' | 'matrix' | 'recommendations' | 'audit_log'): void {
     this.activeResultTab = tab;
     this.taskRoutingService.activeResultTab = tab;
   }
@@ -187,7 +239,9 @@ export class AnalysisComponent implements OnInit {
             status: data.status,
             step: data.step,
             message: msg,
-            timestamp: new Date().toLocaleTimeString()
+            timestamp: new Date().toLocaleTimeString(),
+            input_data: data.input_data,
+            result: data.result
           });
 
           // Async Initial Task Data Fetch: Check if DocumentAnalysisAgent returned tasks
@@ -199,6 +253,7 @@ export class AnalysisComponent implements OnInit {
         } else if (data.type === 'complete') {
           this.progressPercent = 100;
           this.analyzing = false;
+          this.activeResultTab = 'matrix';
           this.analysisResult = {
             success: true,
             analysis_complete: true,

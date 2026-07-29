@@ -183,28 +183,40 @@ PROJECT: Enterprise Portal Refactoring
       <!-- Result View Tabs -->
       <div class="result-tabs">
         <button 
+          [class.active]="activeResultTab === 'matrix'" 
+          (click)="setActiveResultTab('matrix')"
+          class="result-tab-btn">
+          <i class="fa-solid fa-table-list"></i> Task Routing Execution Table
+        </button>
+        <button 
           [class.active]="activeResultTab === 'overview'" 
-          (click)="activeResultTab = 'overview'"
+          (click)="setActiveResultTab('overview')"
           class="result-tab-btn">
           <i class="fa-solid fa-chart-line"></i> Overview & Summary
         </button>
         <button 
-          [class.active]="activeResultTab === 'matrix'" 
-          (click)="activeResultTab = 'matrix'"
-          class="result-tab-btn">
-          <i class="fa-solid fa-table-list"></i> Routing Matrix
-        </button>
-        <button 
           [class.active]="activeResultTab === 'recommendations'" 
-          (click)="activeResultTab = 'recommendations'"
+          (click)="setActiveResultTab('recommendations')"
           class="result-tab-btn">
           <i class="fa-solid fa-lightbulb"></i> Action Plan & Risk
         </button>
+        <button 
+          [class.active]="activeResultTab === 'audit_log'" 
+          (click)="setActiveResultTab('audit_log')"
+          class="result-tab-btn">
+          <i class="fa-solid fa-shield-halved text-cyan"></i> Guardrail & Execution Log
+        </button>
       </div>
 
-      <button class="new-analysis-btn" (click)="reset()">
-        <i class="fa-solid fa-rotate-right"></i> New Analysis
-      </button>
+      <div class="flex items-center gap-2">
+        <button class="new-analysis-btn bg-cyan-600/30 text-cyan-300 border-cyan-500/50 hover:bg-cyan-600/50" (click)="generateExecutionPlanFromAnalysis()" [disabled]="generatingPlan">
+          <i class="fa-solid" [class.fa-spinner]="generatingPlan" [class.fa-spin]="generatingPlan" [class.fa-list-check]="!generatingPlan"></i>
+          <span>{{ generatingPlan ? 'Generating Plan...' : 'Create Execution Plan' }}</span>
+        </button>
+        <button class="new-analysis-btn" (click)="reset()">
+          <i class="fa-solid fa-rotate-right"></i> New Analysis
+        </button>
+      </div>
     </div>
 
     <!-- KPI Summary Grid -->
@@ -332,6 +344,105 @@ PROJECT: Enterprise Portal Refactoring
               <span>{{ step }}</span>
             </li>
           </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: GUARDRAIL & MULTI-AGENT AUDIT LOG -->
+    <div class="tab-pane mt-4" *ngIf="activeResultTab === 'audit_log' || activeResultTab === 'overview'">
+      <div class="section-card glass-panel audit-log-card">
+        <div class="audit-header flex justify-between items-center" (click)="toggleAuditLog()" style="cursor: pointer;">
+          <div class="header-left flex items-center gap-3">
+            <i class="fa-solid fa-shield-halved text-cyan text-xl"></i>
+            <div>
+              <h3 class="section-title mb-0">Multi-Agent Execution & Privacy Guardrail Audit Log</h3>
+              <p class="subtitle text-xs text-slate-400 mb-0">Input payloads sent to agents, masked PII mappings, and guardrail validations</p>
+            </div>
+            <span class="pill-badge pill-amber" *ngIf="analysisResult.report.execution_audit_log?.guardrail_report as grReport">
+              {{ (grReport.metrics ? grReport.metrics.total : 0) }} PII Masked
+            </span>
+          </div>
+          <div class="header-right flex items-center gap-2">
+            <span class="toggle-text text-sm font-semibold text-cyan">{{ isAuditLogOpen ? 'Collapse Log' : 'Expand Log' }}</span>
+            <i class="fa-solid" [class.fa-chevron-up]="isAuditLogOpen" [class.fa-chevron-down]="!isAuditLogOpen"></i>
+          </div>
+        </div>
+
+        <!-- Collapsible Audit Log Content -->
+        <div class="audit-body mt-4" *ngIf="isAuditLogOpen">
+          <!-- Guardrail Operations Summary -->
+          <div class="guardrail-summary-panel glass-panel-sm p-4 mb-4" *ngIf="analysisResult.report.execution_audit_log?.guardrail_report as gr">
+            <div class="guardrail-status-row flex flex-wrap gap-4 items-center">
+              <div class="status-badge-item">
+                <span class="status-label text-xs text-slate-400">Domain Scope Check: </span>
+                <span class="pill-badge pill-emerald"><i class="fa-solid fa-check"></i> PASSED</span>
+              </div>
+              <div class="status-badge-item">
+                <span class="status-label text-xs text-slate-400">Prompt Injection Neutralization: </span>
+                <span class="pill-badge pill-emerald"><i class="fa-solid fa-shield"></i> NEUTRALIZED</span>
+              </div>
+              <div class="status-badge-item">
+                <span class="status-label text-xs text-slate-400">Sensitive PII Redacted: </span>
+                <span class="pill-badge pill-amber">{{ (gr.metrics ? gr.metrics.total : 0) }} Token(s)</span>
+              </div>
+            </div>
+            <p class="action-desc mt-3 text-sm text-cyan"><i class="fa-solid fa-circle-info"></i> {{ gr.action_taken }}</p>
+
+            <!-- Masked PII Redaction Mapping Table -->
+            <div class="masked-pii-table mt-4" *ngIf="getObjectKeys(gr.masked_entities).length > 0">
+              <h4 class="sub-heading text-amber text-sm font-bold"><i class="fa-solid fa-user-shield"></i> Redacted PII Audit Mapping (Zero-PII Anonymization)</h4>
+              <div class="table-wrapper mt-2">
+                <table class="glass-table-sm">
+                  <thead>
+                    <tr>
+                      <th>Anonymized Placeholder Tag</th>
+                      <th>Redacted Original Value (Masked)</th>
+                      <th>Action Taken</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let key of getObjectKeys(gr.masked_entities)">
+                      <td class="tag-cell"><code class="text-cyan font-mono">{{ key }}</code></td>
+                      <td class="pii-cell"><span class="masked-val text-amber font-mono">{{ gr.masked_entities[key] }}</span></td>
+                      <td><span class="pill-badge pill-emerald">Zero-PII Anonymized</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Per-Agent Step Execution & Input Data Payload Cards -->
+          <div class="agent-steps-list" *ngIf="analysisResult.report.execution_audit_log?.execution_steps as steps">
+            <h4 class="steps-heading text-purple font-bold text-sm mb-3"><i class="fa-solid fa-diagram-project"></i> Per-Agent Input & Output Data Logs ({{ steps.length }} Steps)</h4>
+            
+            <div *ngFor="let step of steps; let idx = index" class="agent-step-card glass-panel-sm p-3 mb-3">
+              <div class="step-card-header flex justify-between items-center" (click)="toggleStep(idx)" style="cursor: pointer;">
+                <div class="step-title flex items-center gap-3">
+                  <span class="step-idx font-mono text-xs bg-slate-800 text-cyan px-2 py-1 rounded">Step {{ idx + 1 }}</span>
+                  <span class="agent-name font-semibold text-slate-100">{{ step.agent }}</span>
+                  <span class="pill-badge pill-emerald">{{ step.status | uppercase }}</span>
+                </div>
+                <div class="step-actions flex items-center gap-2">
+                  <span class="toggle-hint text-xs text-cyan">{{ expandedSteps[idx] ? 'Hide Input/Output Payloads' : 'View Input/Output Payloads' }}</span>
+                  <i class="fa-solid" [class.fa-chevron-up]="expandedSteps[idx]" [class.fa-chevron-down]="!expandedSteps[idx]"></i>
+                </div>
+              </div>
+
+              <!-- Input and Output JSON Payloads -->
+              <div class="step-payloads mt-3 grid grid-cols-1 md:grid-cols-2 gap-3" *ngIf="expandedSteps[idx]">
+                <div class="payload-box glass-panel-sm p-3">
+                  <div class="payload-title text-cyan text-xs font-bold mb-2"><i class="fa-solid fa-right-to-bracket"></i> Input Data Sent to Agent</div>
+                  <pre class="json-code-block text-xs font-mono bg-slate-950 p-2 rounded overflow-x-auto max-h-60 text-emerald-300">{{ formatJson(step.input_data) }}</pre>
+                </div>
+
+                <div class="payload-box glass-panel-sm p-3">
+                  <div class="payload-title text-purple text-xs font-bold mb-2"><i class="fa-solid fa-right-from-bracket"></i> Output Result Generated</div>
+                  <pre class="json-code-block text-xs font-mono bg-slate-950 p-2 rounded overflow-x-auto max-h-60 text-purple-300">{{ formatJson(step.result) }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

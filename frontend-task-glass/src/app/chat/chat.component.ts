@@ -188,6 +188,50 @@ export class ChatComponent implements OnInit {
     });
   }
 
+  // Accordion state for Chat Guardrail & Audit Logs
+  expandedLogs: { [key: number]: boolean } = {};
+
+  toggleLog(index: number): void {
+    this.expandedLogs[index] = !this.expandedLogs[index];
+  }
+
+  getObjectKeys(obj: any): string[] {
+    return obj ? Object.keys(obj) : [];
+  }
+
+  formatJson(obj: any): string {
+    if (!obj) return '';
+    try {
+      return JSON.stringify(obj, null, 2);
+    } catch {
+      return String(obj);
+    }
+  }
+
+  generatePlanFromChat(): void {
+    this.loading = true;
+    const chatDocName = this.activeAnalysisFileName || 'Chat Session';
+    
+    this.taskRoutingService.generateExecutionPlan({
+      source: `Chat Assistant (${chatDocName})`,
+      document_text: this.userMessage || this.taskRoutingService.documentText || 'Agile Task Analysis & Execution Plan'
+    }).subscribe({
+      next: (res: any) => {
+        this.loading = false;
+        this.messages.push({
+          role: 'assistant',
+          content: `🚀 I have created a new **Project Execution Plan** based on our session! It includes Agile User Stories, resource/agent assignments, effort points, and a multi-sprint roadmap timeline.\n\nYou can inspect it on the **Execution Plans** tab in the main navigation!`,
+          timestamp: new Date()
+        });
+      },
+      error: (err: any) => {
+        this.loading = false;
+        this.error = 'Failed to generate execution plan from chat.';
+        console.error(err);
+      }
+    });
+  }
+
   sendMessage(): void {
     if ((!this.userMessage.trim() && !this.attachedImageBase64) || !this.sessionId) {
       return;
@@ -220,10 +264,13 @@ export class ChatComponent implements OnInit {
 
     this.chatService.sendMessage(this.sessionId, apiMessage, userImage || undefined).subscribe({
       next: (response: any) => {
+        const textContent = response.response || response.message || 'No response content returned.';
         const assistantMsg: ChatMessage = {
           role: 'assistant',
-          content: response.response,
-          timestamp: new Date()
+          content: textContent,
+          timestamp: new Date(),
+          guardrail_report: response.guardrail_report,
+          input_data: response.input_data
         };
         this.messages.push(assistantMsg);
         if (this.sessionId) {
@@ -231,7 +278,7 @@ export class ChatComponent implements OnInit {
         }
         this.loading = false;
         this.scrollToBottom();
-        this.speak(response.response);
+        this.speak(textContent);
       },
       error: (err: any) => {
         this.error = 'Failed to send message. Please try again.';

@@ -142,6 +142,27 @@ def init_database():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+
+    # Create ProjectExecutionPlans table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS project_execution_plans (
+            plan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            plan_name TEXT NOT NULL,
+            description TEXT,
+            source TEXT DEFAULT 'Task Routing Analysis',
+            total_user_stories INTEGER NOT NULL DEFAULT 0,
+            total_story_points INTEGER NOT NULL DEFAULT 0,
+            total_effort_hours REAL NOT NULL DEFAULT 0,
+            total_cost REAL NOT NULL DEFAULT 0,
+            sprint_count INTEGER NOT NULL DEFAULT 1,
+            start_date TEXT,
+            target_end_date TEXT,
+            user_stories_json TEXT NOT NULL,
+            timeline_json TEXT NOT NULL,
+            team_allocation_json TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     
     # Create RoutingDecisions table
     cursor.execute('''
@@ -177,6 +198,19 @@ def init_database():
             content TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (session_id) REFERENCES chat_sessions (session_id)
+        )
+    ''')
+    
+    # Create AuditLogs table for GDPR Guardrail evaluation audit trail
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            log_id TEXT PRIMARY KEY,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            customer_id TEXT,
+            action TEXT NOT NULL,
+            trigger_type TEXT NOT NULL,
+            details TEXT,
+            status TEXT NOT NULL
         )
     ''')
     

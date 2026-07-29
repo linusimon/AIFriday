@@ -29,9 +29,8 @@ class ResourceMatchingAgent(Agent):
         """
         self.log("Starting resource matching...")
         
-        # Get classified tasks
-        classification = context.get('TaskClassificationAgent', {})
-        tasks = classification.get('classified_tasks', [])
+        # Get tasks from context
+        tasks = self.get_tasks(context)
         
         if not tasks:
             self.log("No tasks to match")

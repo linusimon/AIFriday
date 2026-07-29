@@ -24,7 +24,7 @@ export class TaskRoutingService {
   public selectedFile: File | null = null;
   public documentText: string = '';
   public inputMode: 'file' | 'text' = 'file';
-  public activeResultTab: 'overview' | 'matrix' | 'recommendations' = 'overview';
+  public activeResultTab: 'overview' | 'matrix' | 'recommendations' | 'audit_log' = 'overview';
   public analyzing: boolean = false;
   public analysisResult: AnalysisResult | null = null;
   public error: string | null = null;
@@ -295,5 +295,23 @@ export class TaskRoutingService {
 
   deleteCostModel(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/admin/cost-models/${id}`);
+  }
+
+  // ========== Project Execution Plans ==========
+
+  generateExecutionPlan(payload: { source?: string; input_context?: any; document_text?: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/execution-plans/generate`, payload);
+  }
+
+  getExecutionPlans(): Observable<any> {
+    return this.http.get(`${this.apiUrl}/execution-plans`);
+  }
+
+  getExecutionPlanById(planId: number): Observable<any> {
+    return this.http.get(`${this.apiUrl}/execution-plans/${planId}`);
+  }
+
+  deleteExecutionPlan(planId: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/execution-plans/${planId}`);
   }
 }

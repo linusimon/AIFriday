@@ -4,6 +4,7 @@ import { LoginComponent } from './login/login.component';
 import { AdminComponent } from './admin/admin.component';
 import { AnalysisComponent } from './analysis/analysis.component';
 import { ChatComponent } from './chat/chat.component';
+import { ExecutionPlansComponent } from './execution-plans/execution-plans.component';
 import { AuthGuard } from './guards/auth.guard';
 import { AdminGuard } from './guards/admin.guard';
 
@@ -12,6 +13,7 @@ const routes: Routes = [
   { path: 'admin', component: AdminComponent, canActivate: [AdminGuard] },
   { path: 'analysis', component: AnalysisComponent, canActivate: [AuthGuard] },
   { path: 'chat', component: ChatComponent, canActivate: [AuthGuard] },
+  { path: 'execution-plans', component: ExecutionPlansComponent, canActivate: [AuthGuard] },
   { path: '', redirectTo: '/analysis', pathMatch: 'full' }
 ];
 

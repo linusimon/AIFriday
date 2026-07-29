@@ -31,7 +31,7 @@ class DecisionAgent(Agent):
         self.log("Starting decision making...")
         
         # Get data from all previous agents
-        tasks = context.get('TaskClassificationAgent', {}).get('classified_tasks', [])
+        tasks = self.get_tasks(context)
         resource_matching = context.get('ResourceMatchingAgent', {})
         workload_optimization = context.get('WorkloadOptimizationAgent', {})
         cost_optimization = context.get('CostOptimizationAgent', {})
