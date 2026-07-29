@@ -21,6 +21,11 @@ export class ExecutionPlansComponent implements OnInit {
   searchQuery: string = '';
   selectedSprintFilter: string = 'all';
 
+  latestPlan: ProjectExecutionPlan | null = null;
+  latestActiveTab: 'stories' | 'timeline' | 'team' = 'stories';
+  latestSprintFilter: string = 'all';
+  latestSearchQuery: string = '';
+
   constructor(private taskRoutingService: TaskRoutingService) {}
 
   ngOnInit(): void {
@@ -32,7 +37,9 @@ export class ExecutionPlansComponent implements OnInit {
     this.error = null;
     this.taskRoutingService.getExecutionPlans().subscribe({
       next: (res: any) => {
-        this.plans = res.plans || [];
+        const rawPlans: ProjectExecutionPlan[] = res.plans || [];
+        this.plans = rawPlans.sort((a, b) => (b.plan_id || 0) - (a.plan_id || 0));
+        this.latestPlan = this.plans.length > 0 ? this.plans[0] : null;
         this.loading = false;
       },
       error: (err: any) => {
@@ -64,6 +71,9 @@ export class ExecutionPlansComponent implements OnInit {
         if (this.selectedPlan?.plan_id === planId) {
           this.selectedPlan = null;
         }
+        if (this.latestPlan?.plan_id === planId) {
+          this.latestPlan = this.plans.length > 0 ? this.plans[0] : null;
+        }
         this.successMsg = 'Execution plan deleted successfully.';
         setTimeout(() => this.successMsg = null, 4000);
       },
@@ -72,6 +82,26 @@ export class ExecutionPlansComponent implements OnInit {
         console.error(err);
       }
     });
+  }
+
+  get latestFilteredUserStories(): UserStory[] {
+    if (!this.latestPlan || !this.latestPlan.user_stories) return [];
+    let stories = this.latestPlan.user_stories;
+
+    if (this.latestSprintFilter !== 'all') {
+      stories = stories.filter(s => s.sprint === this.latestSprintFilter);
+    }
+
+    if (this.latestSearchQuery.trim()) {
+      const q = this.latestSearchQuery.toLowerCase();
+      stories = stories.filter(s => 
+        s.story_id.toLowerCase().includes(q) ||
+        s.title.toLowerCase().includes(q) ||
+        s.assigned_to.toLowerCase().includes(q)
+      );
+    }
+
+    return stories;
   }
 
   get filteredUserStories(): UserStory[] {

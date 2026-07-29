@@ -183,26 +183,26 @@ PROJECT: Enterprise Portal Refactoring
       <!-- Result View Tabs -->
       <div class="result-tabs">
         <button 
+          [class.active]="activeResultTab === 'matrix'" 
+          (click)="setActiveResultTab('matrix')"
+          class="result-tab-btn">
+          <i class="fa-solid fa-table-list"></i> Task Routing Execution Table
+        </button>
+        <button 
           [class.active]="activeResultTab === 'overview'" 
-          (click)="activeResultTab = 'overview'"
+          (click)="setActiveResultTab('overview')"
           class="result-tab-btn">
           <i class="fa-solid fa-chart-line"></i> Overview & Summary
         </button>
         <button 
-          [class.active]="activeResultTab === 'matrix'" 
-          (click)="activeResultTab = 'matrix'"
-          class="result-tab-btn">
-          <i class="fa-solid fa-table-list"></i> Routing Matrix
-        </button>
-        <button 
           [class.active]="activeResultTab === 'recommendations'" 
-          (click)="activeResultTab = 'recommendations'"
+          (click)="setActiveResultTab('recommendations')"
           class="result-tab-btn">
           <i class="fa-solid fa-lightbulb"></i> Action Plan & Risk
         </button>
         <button 
           [class.active]="activeResultTab === 'audit_log'" 
-          (click)="activeResultTab = 'audit_log'"
+          (click)="setActiveResultTab('audit_log')"
           class="result-tab-btn">
           <i class="fa-solid fa-shield-halved text-cyan"></i> Guardrail & Execution Log
         </button>

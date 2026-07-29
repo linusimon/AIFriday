@@ -253,6 +253,7 @@ export class AnalysisComponent implements OnInit {
         } else if (data.type === 'complete') {
           this.progressPercent = 100;
           this.analyzing = false;
+          this.activeResultTab = 'matrix';
           this.analysisResult = {
             success: true,
             analysis_complete: true,
