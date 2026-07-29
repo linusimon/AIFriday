@@ -1,0 +1,24 @@
+Legacy System Modernization Assistant
+Summary: Develop an AI assistant that analyzes legacy codebases and provides 
+recommendations for modernization, refactoring, and technology migration.
+Problem Statement: Organizations struggle with modernizing legacy systems due to 
+complexity and risk. Your task is to create an AI assistant that analyzes legacy code, identifies 
+modernization opportunities, and provides step-by-step migration recommendations. The 
+system should understand code dependencies, assess migration risks, and generate 
+modernized code while preserving business logic.
+Steps:
+• Design code analysis engines for legacy language understanding and dependency 
+mapping
+• Implement modernization strategy generation based on current technology stacks
+• Create risk assessment frameworks for migration planning and execution
+• Build code transformation tools with business logic preservation
+• Develop testing strategy generation for validating modernized systems
+• Include project planning and resource estimation for modernization efforts
+Suggested Data Requirements:
+• Legacy codebase samples across different languages and technologies
+• Modernization case studies and transformation examples
+• Technology migration patterns and best practices
+• Risk assessment criteria and mitigation strategies
+Themes: AI in software engineering lifecycle, AI for Reengineering
+The steps and data requirements outlined above are intended solely as reference points to 
+assist you in conceptualising your solution.
