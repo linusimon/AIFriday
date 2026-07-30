@@ -146,17 +146,13 @@ Rules for output JSON format (Return ONLY valid JSON matching this exact structu
 
     def _get_db_resources(self) -> List[Dict[str, Any]]:
         try:
-            conn = database.get_db_connection()
-            rows = conn.execute("SELECT resource_id, name, role, skills, cost_per_hour FROM human_resources LIMIT 10").fetchall()
-            return [dict(r) for r in rows]
+            return database.execute_query("SELECT resource_id, name, role, skills, cost_per_hour FROM human_resources LIMIT 10")
         except Exception:
             return [{"name": "Senior Full Stack Dev", "role": "Developer", "cost_per_hour": 75.0}]
 
     def _get_db_ai_agents(self) -> List[Dict[str, Any]]:
         try:
-            conn = database.get_db_connection()
-            rows = conn.execute("SELECT agent_id, agent_name, capabilities, cost_per_hour FROM ai_agents LIMIT 10").fetchall()
-            return [dict(r) for r in rows]
+            return database.execute_query("SELECT agent_id, agent_name, capabilities, cost_per_hour FROM ai_agents LIMIT 10")
         except Exception:
             return [{"agent_name": "Code Generation Agent", "capabilities": "Python, API", "cost_per_hour": 15.0}]
 

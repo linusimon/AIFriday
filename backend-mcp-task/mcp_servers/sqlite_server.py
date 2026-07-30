@@ -1,174 +1,156 @@
 """
-AIFriday Intelligent Task Routing - Standalone Model Context Protocol (MCP) SQLite Server
-Provides tools for local SQL queries against task routing, resources, policy management,
-knowledge base, and GDPR audit trails.
+AIFriday Intelligent Task Routing - Standalone Generic SQLite Model Context Protocol (MCP) Server
+
+An independent, reusable MCP server for executing SQLite database operations.
+Provides generic tools for connecting, running SELECT queries, executing INSERT/UPDATE/DELETE
+statements, running transaction batches, and inspecting schemas for ANY SQLite database.
 """
 
 import os
 import sys
 import sqlite3
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from mcp.server.fastmcp import FastMCP
 
-# Path resolution for SQLite database
+# Path resolution for target SQLite database (configurable via environment variable)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(BASE_DIR, "task_routing.db")
-if not os.path.exists(DB_PATH):
-    DATA_DIR = os.path.join(BASE_DIR, "data")
-    os.makedirs(DATA_DIR, exist_ok=True)
-    DB_PATH = os.path.join(DATA_DIR, "task_routing.db")
+DEFAULT_DB_PATH = os.environ.get("SQLITE_DB_PATH", os.path.join(BASE_DIR, "task_routing.db"))
+
+if not os.path.isabs(DEFAULT_DB_PATH):
+    DEFAULT_DB_PATH = os.path.join(BASE_DIR, DEFAULT_DB_PATH)
+
+# Ensure database directory exists
+os.makedirs(os.path.dirname(DEFAULT_DB_PATH), exist_ok=True)
 
 # Initialize FastMCP Server instance on port 5001
-mcp = FastMCP("TaskRouting-MCP-Server", host="127.0.0.1", port=5001)
+mcp = FastMCP("Generic-SQLite-MCP-Server", host="127.0.0.1", port=5001)
 
-def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+def get_db_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
+    """Helper to open a connection to the specified or default SQLite database."""
+    target_path = db_path if db_path else DEFAULT_DB_PATH
+    conn = sqlite3.connect(target_path)
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_db():
-    """Initializes tables and ensures database schema exists."""
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS gdpr_audit_trail (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            action_type TEXT,
-            identifier_hash TEXT,
-            status TEXT,
-            details TEXT
-        )
-    ''')
-
-    # Seed initial audit trail if empty
-    cursor.execute("SELECT COUNT(*) FROM gdpr_audit_trail")
-    if cursor.fetchone()[0] == 0:
-        cursor.execute('''
-            INSERT INTO gdpr_audit_trail (timestamp, action_type, identifier_hash, status, details)
-            VALUES (datetime('now'), 'GDPR_SYSTEM_INIT', 'SYSTEM', 'ACTIVE', 'AIFriday MCP SQLite Server Initialized with Local Privacy Guardrail.')
-        ''')
-        conn.commit()
-
-    conn.close()
-
-# ------------------ FastMCP Tool Registrations ------------------
+# ------------------ Generic FastMCP Tool Registrations ------------------
 
 @mcp.tool()
-def query_tasks(query_str: str = "", limit: int = 10) -> List[Dict[str, Any]]:
-    """MCP Tool: Queries tasks table from task_routing.db SQLite database."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    if query_str:
-        cursor.execute(
-            "SELECT * FROM tasks WHERE task_name LIKE ? OR description LIKE ? OR skills_required LIKE ? LIMIT ?",
-            (f"%{query_str}%", f"%{query_str}%", f"%{query_str}%", limit)
-        )
-    else:
-        cursor.execute("SELECT * FROM tasks ORDER BY task_id DESC LIMIT ?", (limit,))
-    rows = [dict(r) for r in cursor.fetchall()]
-    conn.close()
-    return rows
-
-@mcp.tool()
-def query_resources(query_str: str = "", limit: int = 10) -> List[Dict[str, Any]]:
-    """MCP Tool: Queries human resources and AI agents from task_routing.db."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    results = []
-    if query_str:
-        cursor.execute("SELECT *, 'human' as resource_kind FROM human_resources WHERE name LIKE ? OR skills LIKE ? OR role LIKE ? LIMIT ?",
-                       (f"%{query_str}%", f"%{query_str}%", f"%{query_str}%", limit))
-        results.extend([dict(r) for r in cursor.fetchall()])
-        
-        cursor.execute("SELECT *, 'ai_agent' as resource_kind FROM ai_agents WHERE agent_name LIKE ? OR capabilities LIKE ? OR specialization LIKE ? LIMIT ?",
-                       (f"%{query_str}%", f"%{query_str}%", f"%{query_str}%", limit))
-        results.extend([dict(r) for r in cursor.fetchall()])
-    else:
-        cursor.execute("SELECT *, 'human' as resource_kind FROM human_resources LIMIT ?", (limit,))
-        results.extend([dict(r) for r in cursor.fetchall()])
-        cursor.execute("SELECT *, 'ai_agent' as resource_kind FROM ai_agents LIMIT ?", (limit,))
-        results.extend([dict(r) for r in cursor.fetchall()])
-    conn.close()
-    return results
-
-@mcp.tool()
-def search_knowledge_base(pattern: str = "") -> List[Dict[str, Any]]:
-    """MCP Tool: Searches knowledge base and document chunks."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT * FROM knowledge_base 
-        WHERE title LIKE ? OR content LIKE ? OR tags LIKE ?
-    ''', (f"%{pattern}%", f"%{pattern}%", f"%{pattern}%"))
-    rows = [dict(r) for r in cursor.fetchall()]
-    conn.close()
-    return rows
-
-@mcp.tool()
-def fetch_policy_playbook(policy_category: str) -> Dict[str, Any]:
-    """MCP Tool: Retrieves governance policies and SLA playbooks."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM policies WHERE policy_type LIKE ? OR title LIKE ?",
-                   (f"%{policy_category}%", f"%{policy_category}%"))
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else {}
-
-@mcp.tool()
-def record_audit_entry(action_type: str, details: str, status: str = "COMPLETED") -> bool:
-    """MCP Tool: Logs a GDPR or system governance action in the audit trail."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO gdpr_audit_trail (timestamp, action_type, identifier_hash, status, details)
-        VALUES (datetime('now'), ?, 'LOGGED', ?, ?)
-    ''', (action_type, status, details))
-    conn.commit()
-    conn.close()
-    return True
-
-@mcp.tool()
-def purge_data_subject(identifier: str) -> Dict[str, int]:
-    """MCP Tool: Performs in-place anonymization for GDPR Right to Erasure (Art. 17)."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    anonymized_tag = "[GDPR_ANONYMIZED]"
+def execute_query(sql: str, params: Optional[List[Any]] = None, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Generic MCP Tool: Executes a read-only SQL query (SELECT) against the SQLite database and returns rows.
     
-    cursor.execute('''
-        UPDATE tasks SET description = ? WHERE description LIKE ? OR assigned_to LIKE ?
-    ''', (anonymized_tag, f"%{identifier}%", f"%{identifier}%"))
-    task_count = cursor.rowcount
-
-    cursor.execute('''
-        UPDATE human_resources SET email = ? WHERE email LIKE ? OR name LIKE ?
-    ''', (anonymized_tag, f"%{identifier}%", f"%{identifier}%"))
-    hr_count = cursor.rowcount
-
-    conn.commit()
-    conn.close()
-    return {"tasks_updated": task_count, "human_resources_updated": hr_count}
+    Args:
+        sql: Parameterized SQL query string (e.g. "SELECT * FROM tasks WHERE status = ?")
+        params: Optional list of query positional parameter values
+        db_path: Optional custom path to SQLite database file
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(sql, params or [])
+        rows = [dict(r) for r in cursor.fetchall()]
+        return rows
+    finally:
+        conn.close()
 
 @mcp.tool()
-def get_gdpr_audit_logs(limit: int = 20) -> List[Dict[str, Any]]:
-    """MCP Tool: Retrieves recent GDPR audit trail records."""
-    conn = get_connection()
+def execute_statement(sql: str, params: Optional[List[Any]] = None, db_path: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Generic MCP Tool: Executes a write/modification SQL statement (INSERT, UPDATE, DELETE, DDL) and commits transaction.
+    
+    Args:
+        sql: Parameterized SQL statement string
+        params: Optional list of statement parameter values
+        db_path: Optional custom path to SQLite database file
+    """
+    conn = get_db_connection(db_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM gdpr_audit_trail ORDER BY id DESC LIMIT ?", (limit,))
-    rows = [dict(r) for r in cursor.fetchall()]
-    conn.close()
-    return rows
+    try:
+        cursor.execute(sql, params or [])
+        conn.commit()
+        return {
+            "status": "success",
+            "rows_affected": cursor.rowcount,
+            "last_row_id": cursor.lastrowid
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+    finally:
+        conn.close()
+
+@mcp.tool()
+def execute_batch(statements: List[Dict[str, Any]], db_path: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Generic MCP Tool: Executes a list of SQL statements within a single transaction block.
+    
+    Args:
+        statements: List of dicts, each with 'sql' string and optional 'params' list.
+        db_path: Optional custom path to SQLite database file.
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    executed_count = 0
+    try:
+        for stmt in statements:
+            sql = stmt.get('sql')
+            params = stmt.get('params', [])
+            if sql:
+                cursor.execute(sql, params)
+                executed_count += 1
+        conn.commit()
+        return {
+            "status": "success",
+            "executed_count": executed_count
+        }
+    except Exception as e:
+        conn.rollback()
+        return {
+            "status": "error",
+            "error": str(e),
+            "executed_before_failure": executed_count
+        }
+    finally:
+        conn.close()
+
+@mcp.tool()
+def list_tables(db_path: Optional[str] = None) -> List[str]:
+    """
+    Generic MCP Tool: Lists all user tables present in the target SQLite database.
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+        tables = [row['name'] for row in cursor.fetchall()]
+        return tables
+    finally:
+        conn.close()
+
+@mcp.tool()
+def describe_table(table_name: str, db_path: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Generic MCP Tool: Returns schema column details for a given table in the database.
+    """
+    conn = get_db_connection(db_path)
+    cursor = conn.cursor()
+    try:
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = [dict(r) for r in cursor.fetchall()]
+        return columns
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
-    init_db()
     print("==================================================================")
-    print("AIFriday Standalone MCP SQLite Server starting...")
+    print("AIFriday Standalone Generic SQLite MCP Server starting...")
     print("• Transport: SSE (Server-Sent Events)")
     print("• Server Endpoint: http://127.0.0.1:5001/sse")
-    print("• SQLite Database: ", DB_PATH)
+    print("• Target SQLite Database: ", DEFAULT_DB_PATH)
     print("==================================================================")
     mcp.run(transport="sse")

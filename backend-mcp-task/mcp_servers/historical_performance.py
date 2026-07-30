@@ -1,30 +1,19 @@
 """
 Historical Performance MCP Server
 Provides tools for accessing historical assignment data and performance metrics
+using generic SQLite MCP database operations.
 """
 from mcp_servers import MCPServer
-from database import get_db_connection
+from database import execute_query
 from typing import List, Dict, Optional
 
 # Create MCP server instance
 performance_server = MCPServer("performance", "Historical Performance Server")
 
 def get_historical_assignments(resource_id: Optional[int] = None, resource_type: str = 'human') -> List[Dict]:
-    """
-    Get historical assignment data
-    
-    Args:
-        resource_id: Specific resource ID (optional)
-        resource_type: 'human' or 'ai'
-    
-    Returns:
-        List of historical assignments
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+    """Get historical assignment data using generic MCP query execution."""
     if resource_id:
-        cursor.execute("""
+        return execute_query("""
             SELECT 
                 ha.*,
                 t.task_name,
@@ -34,9 +23,9 @@ def get_historical_assignments(resource_id: Optional[int] = None, resource_type:
             LEFT JOIN tasks t ON ha.task_id = t.task_id
             WHERE ha.resource_id = ? AND ha.resource_type = ?
             ORDER BY ha.created_at DESC
-        """, (resource_id, resource_type.capitalize()))
+        """, [resource_id, resource_type.capitalize()])
     else:
-        cursor.execute("""
+        return execute_query("""
             SELECT 
                 ha.*,
                 t.task_name,
@@ -47,26 +36,10 @@ def get_historical_assignments(resource_id: Optional[int] = None, resource_type:
             ORDER BY ha.created_at DESC
             LIMIT 100
         """)
-    
-    assignments = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return assignments
 
 def get_success_rates(resource_id: int, resource_type: str = 'human') -> Dict:
-    """
-    Get success rate metrics for a specific resource
-    
-    Args:
-        resource_id: Resource ID
-        resource_type: 'human' or 'ai'
-    
-    Returns:
-        Success rate statistics
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("""
+    """Get success rate metrics using generic MCP query execution."""
+    rows = execute_query("""
         SELECT 
             COUNT(*) as total_assignments,
             SUM(CASE WHEN outcome = 'Success' THEN 1 ELSE 0 END) as successful,
@@ -76,35 +49,23 @@ def get_success_rates(resource_id: int, resource_type: str = 'human') -> Dict:
             AVG(completion_time) as avg_completion_time
         FROM historical_assignments
         WHERE resource_id = ? AND resource_type = ?
-    """, (resource_id, resource_type.capitalize()))
+    """, [resource_id, resource_type.capitalize()])
     
-    stats = dict(cursor.fetchone())
-    conn.close()
+    stats = rows[0] if rows else {
+        "total_assignments": 0, "successful": 0, "delayed": 0, "failed": 0, "avg_quality": 0, "avg_completion_time": 0
+    }
     
-    if stats['total_assignments'] > 0:
+    if stats.get('total_assignments', 0) > 0:
         stats['success_rate'] = round((stats['successful'] / stats['total_assignments']) * 100, 2)
     else:
         stats['success_rate'] = 0
     
     return stats
 
-def get_quality_scores(resource_id: Optional[int] = None, resource_type: str = 'human') -> List[Dict]:
-    """
-    Get quality score history
-    
-    Args:
-        resource_id: Specific resource ID (optional)
-        resource_type: 'human' or 'ai'
-    
-    Returns:
-        Quality score data
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+def get_quality_scores(resource_id: Optional[int] = None, resource_type: str = 'human') -> Dict:
+    """Get quality score history using generic MCP query execution."""
     if resource_id:
-        # Get historical quality scores from assignments
-        cursor.execute("""
+        historical_rows = execute_query("""
             SELECT 
                 resource_id,
                 AVG(quality_score) as avg_quality_score,
@@ -114,38 +75,33 @@ def get_quality_scores(resource_id: Optional[int] = None, resource_type: str = '
             FROM historical_assignments
             WHERE resource_id = ? AND resource_type = ?
             GROUP BY resource_id
-        """, (resource_id, resource_type.capitalize()))
+        """, [resource_id, resource_type.capitalize()])
+        historical = historical_rows[0] if historical_rows else {}
         
-        historical = cursor.fetchone()
-        
-        # Get current quality score from resource table
         if resource_type == 'human':
-            cursor.execute("""
+            current_rows = execute_query("""
                 SELECT name, quality_score, performance_score
                 FROM human_resources
                 WHERE resource_id = ?
-            """, (resource_id,))
+            """, [resource_id])
         else:
-            cursor.execute("""
+            current_rows = execute_query("""
                 SELECT agent_name as name, quality_score, performance_score
                 FROM ai_agents
                 WHERE agent_id = ?
-            """, (resource_id,))
+            """, [resource_id])
         
-        current = cursor.fetchone()
-        conn.close()
-        
-        result = dict(current) if current else {}
+        current = current_rows[0] if current_rows else {}
+        result = current
         if historical:
-            result['historical_avg'] = historical['avg_quality_score']
-            result['historical_min'] = historical['min_quality_score']
-            result['historical_max'] = historical['max_quality_score']
-            result['assignment_count'] = historical['assignment_count']
+            result['historical_avg'] = historical.get('avg_quality_score')
+            result['historical_min'] = historical.get('min_quality_score')
+            result['historical_max'] = historical.get('max_quality_score')
+            result['assignment_count'] = historical.get('assignment_count')
         
         return result
     else:
-        # Get quality scores for all resources
-        cursor.execute("""
+        return execute_query("""
             SELECT 
                 resource_id,
                 resource_type,
@@ -155,10 +111,6 @@ def get_quality_scores(resource_id: Optional[int] = None, resource_type: str = '
             GROUP BY resource_id, resource_type
             ORDER BY avg_quality_score DESC
         """)
-        
-        scores = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return scores
 
 # Register tools
 performance_server.register_tool("get_historical_assignments", get_historical_assignments)

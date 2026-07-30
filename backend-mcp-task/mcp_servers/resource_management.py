@@ -1,32 +1,22 @@
 """
 Resource Management MCP Server
 Provides tools for accessing resource availability, workload, skills, and capacity
+using generic SQLite MCP database operations.
 """
 from mcp_servers import MCPServer
-from database import get_db_connection
+from database import execute_query, execute_statement
 from typing import Optional, List, Dict
 
 # Create MCP server instance
 resource_server = MCPServer("resource", "Resource Management Server")
 
 def get_available_resources(resource_type: Optional[str] = None) -> List[Dict]:
-    """
-    Get all available resources
-    
-    Args:
-        resource_type: Filter by 'human' or 'ai' (optional)
-    
-    Returns:
-        List of available resources
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+    """Get all available resources using generic MCP query execution."""
     resources = []
     
     # Get human resources
     if not resource_type or resource_type == 'human':
-        cursor.execute("""
+        human_rows = execute_query("""
             SELECT 
                 resource_id as id,
                 name,
@@ -43,11 +33,11 @@ def get_available_resources(resource_type: Optional[str] = None) -> List[Dict]:
             WHERE availability = 'Available'
             ORDER BY name
         """)
-        resources.extend([dict(row) for row in cursor.fetchall()])
+        resources.extend(human_rows)
     
     # Get AI agents
     if not resource_type or resource_type == 'ai':
-        cursor.execute("""
+        ai_rows = execute_query("""
             SELECT 
                 agent_id as id,
                 agent_name as name,
@@ -64,28 +54,15 @@ def get_available_resources(resource_type: Optional[str] = None) -> List[Dict]:
             WHERE availability = 'Available'
             ORDER BY agent_name
         """)
-        resources.extend([dict(row) for row in cursor.fetchall()])
+        resources.extend(ai_rows)
     
-    conn.close()
     return resources
 
 def get_current_workload(resource_id: Optional[int] = None, resource_type: Optional[str] = 'human') -> List[Dict]:
-    """
-    Get current workload for resources
-    
-    Args:
-        resource_id: Specific resource ID (optional)
-        resource_type: 'human' or 'ai' (default: 'human')
-    
-    Returns:
-        List of resources with workload information
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+    """Get current workload for resources using generic MCP query execution."""
     if resource_type == 'human':
         if resource_id:
-            cursor.execute("""
+            return execute_query("""
                 SELECT 
                     resource_id as id,
                     name,
@@ -94,9 +71,9 @@ def get_current_workload(resource_id: Optional[int] = None, resource_type: Optio
                     availability
                 FROM human_resources
                 WHERE resource_id = ?
-            """, (resource_id,))
+            """, [resource_id])
         else:
-            cursor.execute("""
+            return execute_query("""
                 SELECT 
                     resource_id as id,
                     name,
@@ -107,7 +84,7 @@ def get_current_workload(resource_id: Optional[int] = None, resource_type: Optio
                 ORDER BY current_workload DESC
             """)
     else:  # AI agents
-        cursor.execute("""
+        return execute_query("""
             SELECT 
                 agent_id as id,
                 agent_name as name,
@@ -117,27 +94,11 @@ def get_current_workload(resource_id: Optional[int] = None, resource_type: Optio
             FROM ai_agents
             ORDER BY agent_name
         """)
-    
-    workload = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return workload
 
 def get_resource_skills(resource_id: int, resource_type: str = 'human') -> Dict:
-    """
-    Get skills for a specific resource
-    
-    Args:
-        resource_id: Resource ID
-        resource_type: 'human' or 'ai'
-    
-    Returns:
-        Resource details with skills
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+    """Get skills for a specific resource using generic MCP query execution."""
     if resource_type == 'human':
-        cursor.execute("""
+        rows = execute_query("""
             SELECT 
                 resource_id as id,
                 name,
@@ -146,9 +107,9 @@ def get_resource_skills(resource_id: int, resource_type: str = 'human') -> Dict:
                 experience
             FROM human_resources
             WHERE resource_id = ?
-        """, (resource_id,))
+        """, [resource_id])
     else:  # AI agents
-        cursor.execute("""
+        rows = execute_query("""
             SELECT 
                 agent_id as id,
                 agent_name as name,
@@ -157,28 +118,16 @@ def get_resource_skills(resource_id: int, resource_type: str = 'human') -> Dict:
                 0 as experience
             FROM ai_agents
             WHERE agent_id = ?
-        """, (resource_id,))
+        """, [resource_id])
     
-    resource = cursor.fetchone()
-    conn.close()
-    
-    if resource:
-        return dict(resource)
+    if rows:
+        return rows[0]
     else:
         return {"error": "Resource not found"}
 
 def get_resource_capacity() -> Dict:
-    """
-    Get overall resource capacity and utilization metrics
-    
-    Returns:
-        Capacity metrics for all resources
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Human resources capacity
-    cursor.execute("""
+    """Get overall resource capacity and utilization metrics using generic MCP query execution."""
+    human_capacity_rows = execute_query("""
         SELECT 
             COUNT(*) as total_count,
             SUM(CASE WHEN availability = 'Available' THEN 1 ELSE 0 END) as available_count,
@@ -187,23 +136,21 @@ def get_resource_capacity() -> Dict:
             MIN(current_workload) as min_workload
         FROM human_resources
     """)
-    human_capacity = dict(cursor.fetchone())
+    human_capacity = human_capacity_rows[0] if human_capacity_rows else {}
     
-    # AI agents capacity
-    cursor.execute("""
+    ai_capacity_rows = execute_query("""
         SELECT 
             COUNT(*) as total_count,
             SUM(CASE WHEN availability = 'Available' THEN 1 ELSE 0 END) as available_count
         FROM ai_agents
     """)
-    ai_capacity = dict(cursor.fetchone())
+    ai_capacity = ai_capacity_rows[0] if ai_capacity_rows else {}
     
-    conn.close()
-    
+    avg_wl = human_capacity.get('avg_workload') or 0
     return {
         "human_resources": human_capacity,
         "ai_agents": ai_capacity,
-        "utilization_status": "High" if human_capacity['avg_workload'] > 70 else "Medium" if human_capacity['avg_workload'] > 40 else "Low"
+        "utilization_status": "High" if avg_wl > 70 else "Medium" if avg_wl > 40 else "Low"
     }
 
 # Register tools

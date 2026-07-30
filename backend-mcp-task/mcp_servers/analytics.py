@@ -1,33 +1,19 @@
 """
 Analytics MCP Server
 Provides tools for similarity search, recommendations, and utilization metrics
+using generic SQLite MCP database operations.
 """
 from mcp_servers import MCPServer
-from database import get_db_connection
+from database import execute_query
 from typing import List, Dict, Optional
 
 # Create MCP server instance
 analytics_server = MCPServer("analytics", "Analytics Server")
 
 def find_similar_tasks(task_description: str, limit: int = 5) -> List[Dict]:
-    """
-    Find similar tasks based on description
-    
-    Args:
-        task_description: Task description to search
-        limit: Maximum number of similar tasks to return
-    
-    Returns:
-        List of similar tasks
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Simple keyword-based similarity search
-    # In production, this would use embeddings and vector similarity
+    """Find similar tasks using generic MCP query execution."""
     keywords = set([word.lower() for word in task_description.split() if len(word) > 3])
-    
-    cursor.execute("""
+    all_tasks = execute_query("""
         SELECT 
             t.*,
             p.project_name
@@ -35,81 +21,39 @@ def find_similar_tasks(task_description: str, limit: int = 5) -> List[Dict]:
         LEFT JOIN projects p ON t.project_id = p.project_id
     """)
     
-    all_tasks = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    
-    # Calculate similarity scores
     scored_tasks = []
     for task in all_tasks:
-        task_words = set([word.lower() for word in (task['description'] + ' ' + task['task_name']).split() if len(word) > 3])
-        similarity = len(keywords & task_words) / len(keywords | task_words) if keywords | task_words else 0
-        
+        desc_name = (task.get('description', '') or '') + ' ' + (task.get('task_name', '') or '')
+        task_words = set([word.lower() for word in desc_name.split() if len(word) > 3])
+        similarity = len(keywords & task_words) / len(keywords | task_words) if (keywords | task_words) else 0
         if similarity > 0:
             task['similarity_score'] = round(similarity * 100, 2)
             scored_tasks.append(task)
     
-    # Sort by similarity and return top results
     scored_tasks.sort(key=lambda x: x['similarity_score'], reverse=True)
     return scored_tasks[:limit]
 
 def recommend_best_resource(task_id: int) -> Dict:
-    """
-    Recommend the best resource for a task based on multiple factors
-    
-    Args:
-        task_id: Task ID
-    
-    Returns:
-        Resource recommendation
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Get task details
-    cursor.execute("""
-        SELECT * FROM tasks WHERE task_id = ?
-    """, (task_id,))
-    
-    task = cursor.fetchone()
-    
-    if not task:
-        conn.close()
+    """Recommend the best resource for a task using generic MCP query execution."""
+    tasks = execute_query("SELECT * FROM tasks WHERE task_id = ?", [task_id])
+    if not tasks:
         return {"error": "Task not found"}
     
-    task_dict = dict(task)
+    task_dict = tasks[0]
     required_skills = task_dict['skills_required']
     complexity = task_dict['complexity']
-    estimated_effort = task_dict['estimated_effort']
-    
-    # Get all available resources with skill matching
     required_skill_set = set([s.strip().lower() for s in required_skills.split(',')])
     
     recommendations = []
+    human_rows = execute_query("SELECT * FROM human_resources WHERE availability = 'Available'")
     
-    # Check human resources
-    cursor.execute("""
-        SELECT * FROM human_resources WHERE availability = 'Available'
-    """)
-    
-    for row in cursor.fetchall():
-        resource = dict(row)
+    for resource in human_rows:
         resource_skills = set([s.strip().lower() for s in resource['skills'].split(',')])
-        
-        # Calculate skill match score
         matched = required_skill_set & resource_skills
         skill_match = (len(matched) / len(required_skill_set)) * 100 if required_skill_set else 0
-        
-        # Calculate workload score (lower workload is better)
         workload_score = max(0, 100 - resource['current_workload'])
-        
-        # Calculate cost efficiency
-        cost_efficiency = (resource['quality_score'] / resource['cost_per_hour']) * 10
-        
-        # Overall score (weighted combination)
-        overall_score = (skill_match * 0.4 + 
-                        resource['quality_score'] * 0.3 + 
-                        workload_score * 0.2 + 
-                        cost_efficiency * 0.1)
+        cost_efficiency = (resource['quality_score'] / resource['cost_per_hour']) * 10 if resource['cost_per_hour'] > 0 else 0
+        overall_score = (skill_match * 0.4 + resource['quality_score'] * 0.3 + workload_score * 0.2 + cost_efficiency * 0.1)
         
         if skill_match > 0:
             recommendations.append({
@@ -124,31 +68,15 @@ def recommend_best_resource(task_id: int) -> Dict:
                 "overall_score": round(overall_score, 2)
             })
     
-    # Check AI agents (if appropriate for complexity)
     if complexity in ['Low', 'Medium']:
-        cursor.execute("""
-            SELECT * FROM ai_agents WHERE availability = 'Available'
-        """)
-        
-        for row in cursor.fetchall():
-            agent = dict(row)
+        ai_rows = execute_query("SELECT * FROM ai_agents WHERE availability = 'Available'")
+        for agent in ai_rows:
             agent_skills = set([s.strip().lower() for s in agent['capabilities'].split(',')])
-            
-            # Calculate skill match score
             matched = required_skill_set & agent_skills
             skill_match = (len(matched) / len(required_skill_set)) * 100 if required_skill_set else 0
-            
-            # AI agents always have 0 workload
             workload_score = 100
-            
-            # Calculate cost efficiency
-            cost_efficiency = (agent['quality_score'] / agent['cost_per_hour']) * 10
-            
-            # Overall score (weighted combination)
-            overall_score = (skill_match * 0.4 + 
-                            agent['quality_score'] * 0.3 + 
-                            workload_score * 0.2 + 
-                            cost_efficiency * 0.1)
+            cost_efficiency = (agent['quality_score'] / agent['cost_per_hour']) * 10 if agent['cost_per_hour'] > 0 else 0
+            overall_score = (skill_match * 0.4 + agent['quality_score'] * 0.3 + workload_score * 0.2 + cost_efficiency * 0.1)
             
             if skill_match > 0:
                 recommendations.append({
@@ -163,12 +91,7 @@ def recommend_best_resource(task_id: int) -> Dict:
                     "overall_score": round(overall_score, 2)
                 })
     
-    conn.close()
-    
-    # Sort by overall score
     recommendations.sort(key=lambda x: x['overall_score'], reverse=True)
-    
-    # Return top recommendation with alternatives
     if recommendations:
         return {
             "task_id": task_id,
@@ -186,17 +109,8 @@ def recommend_best_resource(task_id: int) -> Dict:
         }
 
 def generate_utilization_metrics() -> Dict:
-    """
-    Generate resource utilization metrics
-    
-    Returns:
-        Utilization statistics
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Human resource utilization
-    cursor.execute("""
+    """Generate utilization metrics using generic MCP query execution."""
+    human_metrics_rows = execute_query("""
         SELECT 
             AVG(current_workload) as avg_workload,
             MAX(current_workload) as max_workload,
@@ -207,21 +121,16 @@ def generate_utilization_metrics() -> Dict:
             SUM(CASE WHEN availability = 'Available' THEN 1 ELSE 0 END) as available
         FROM human_resources
     """)
+    human_metrics = human_metrics_rows[0] if human_metrics_rows else {}
     
-    human_metrics = dict(cursor.fetchone())
-    
-    # Top performers
-    cursor.execute("""
+    top_performers = execute_query("""
         SELECT name, role, quality_score, performance_score, current_workload
         FROM human_resources
         ORDER BY (quality_score + performance_score) / 2 DESC
         LIMIT 5
     """)
     
-    top_performers = [dict(row) for row in cursor.fetchall()]
-    
-    # Workload distribution
-    cursor.execute("""
+    workload_distribution = execute_query("""
         SELECT 
             name,
             role,
@@ -231,10 +140,7 @@ def generate_utilization_metrics() -> Dict:
         ORDER BY current_workload DESC
     """)
     
-    workload_distribution = [dict(row) for row in cursor.fetchall()]
-    
-    # Task statistics
-    cursor.execute("""
+    task_metrics_rows = execute_query("""
         SELECT 
             COUNT(*) as total_tasks,
             SUM(CASE WHEN status = 'Open' THEN 1 ELSE 0 END) as open_tasks,
@@ -243,20 +149,19 @@ def generate_utilization_metrics() -> Dict:
             SUM(estimated_effort) as total_effort
         FROM tasks
     """)
+    task_metrics = task_metrics_rows[0] if task_metrics_rows else {}
     
-    task_metrics = dict(cursor.fetchone())
-    
-    conn.close()
-    
+    overloaded_cnt = human_metrics.get('overloaded') or 0
+    underutilized_cnt = human_metrics.get('underutilized') or 0
     return {
         "human_resources": human_metrics,
         "top_performers": top_performers,
         "workload_distribution": workload_distribution,
         "task_metrics": task_metrics,
         "recommendations": {
-            "overloaded_count": human_metrics['overloaded'],
-            "underutilized_count": human_metrics['underutilized'],
-            "message": f"Consider redistributing work. {human_metrics['overloaded']} resources are overloaded (>80% capacity)."
+            "overloaded_count": overloaded_cnt,
+            "underutilized_count": underutilized_cnt,
+            "message": f"Consider redistributing work. {overloaded_cnt} resources are overloaded (>80% capacity)."
         }
     }
 
