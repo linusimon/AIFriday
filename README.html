@@ -45,15 +45,18 @@
     <article class="markdown-body">
         <h1 id="intelligent-task-routing-information-chunking-system">Intelligent Task Routing &amp; Information Chunking System</h1>
 <blockquote>
-<p><strong>TCS AI Friday Season 2 Solution</strong> — Intelligent Task Routing System with Multi-Agent AI Orchestration, 9 Model Context Protocol (MCP) Servers, RAG-powered Knowledge Base, and Adaptive Information Chunking Voice/Text Assistant.</p>
+<p><strong>TCS AI Friday Season 2 Solution</strong> — Intelligent Task Routing System with Multi-Agent AI Orchestration, Standalone Generic SQLite MCP Server (<code>:5001</code>), 9 Domain MCP Servers (<code>:5004</code>), RAG-powered Knowledge Base, and Cognitive Accessibility Voice/Text Assistant.</p>
 </blockquote>
 <hr />
 <h2 id="overview">📚 Overview</h2>
-<p>The <strong>Intelligent Task Routing System</strong> addresses complex resource allocation, task classification, and user comprehension challenges. It processes unstructured requirement documents, extracts &amp; classifies tasks, matches tasks to human experts and AI agents based on skill matrices, balances workload capacities, estimates costs, verifies SLA compliance, and presents decisions with executive summaries and interactive voice/text guidance.</p>
+<p>The <strong>Intelligent Task Routing System</strong> addresses complex resource allocation, task classification, cost/SLA risk evaluation, and cognitive accessibility challenges. It processes unstructured requirement documents, decomposes and cleanses tasks, matches human experts &amp; AI agents, balances workload capacities, generates Agile User Stories &amp; 3-Sprint Execution Plans, and presents decisions with executive summaries and interactive voice/text guidance.</p>
 <h3 id="key-capabilities">Key Capabilities</h3>
 <ul>
-<li>🤖 <strong>10-Agent Autonomous Pipeline</strong>: Sequential and parallel agent orchestration covering document parsing, data cleansing, task classification, RAG enrichment, skill matching, workload optimization, cost optimization, risk/SLA assessment, decision synthesis, and executive summarization.</li>
-<li>🔌 <strong>9 Model Context Protocol (MCP) Servers</strong>: Standardized tools exposing domain functionality for resources, skills, policies, expert knowledge, SLAs, costs, historical performance, project management, and analytics.</li>
+<li>🤖 <strong>10-Agent Autonomous Pipeline</strong>: Sequential and parallel agent orchestration covering document parsing, data cleansing, task classification, RAG enrichment, skill matching, workload optimization, cost optimization, risk/SLA assessment, decision synthesis, summary, and Agile project plan generation.</li>
+<li>🛡️ <strong>Two-Tier Intent &amp; Guardrail Validation</strong>: Evaluates queries against security rules (prompt injection, jailbreak, toxicity, SQL injection, PII masking, rate limit) and domain scope (<code>PrivacyGuardrail.validate_scope</code>). If off-topic, a polite guidance response is immediately returned to the UI. Valid inputs are categorized by <code>TaskIntentAgent</code>.</li>
+<li>⚡ <strong>Asynchronous Parallel Orchestrator</strong>: Uses <code>ThreadPoolExecutor</code> worker pools to execute independent specialist agents (<code>WorkloadOptimizationAgent</code>, <code>CostOptimizationAgent</code>, <code>RiskSLAAgent</code>) asynchronously and in parallel.</li>
+<li>🔌 <strong>Standalone Generic SQLite MCP Server (<code>:5001</code>)</strong>: Independent FastMCP server running on port <code>5001</code> (SSE transport) providing generic, application-agnostic database tools (<code>execute_query</code>, <code>execute_statement</code>, <code>execute_batch</code>, <code>list_tables</code>, <code>describe_table</code>). Has zero business logic and can be reused for any SQLite database across external applications.</li>
+<li>🧩 <strong>9 Domain MCP Tool Servers (<code>:5004</code>)</strong>: Standardized tools exposing domain functions for resources, skills, policies, expert knowledge, SLAs, costs, historical performance, project management, and analytics, routing all SQL executions through the generic SQLite MCP engine.</li>
 <li>🔍 <strong>RAG &amp; FAISS Vector Search</strong>: Vector embedding and retrieval for company policies, SOPs, historical project documentation, and domain knowledge.</li>
 <li>🗣️ <strong>Adaptive Information Chunking Assistant</strong>: Voice and chat interface designed in alignment with <strong>PAS 901 Cognitive Accessibility Principles</strong>, featuring step-by-step information chunking, interactive pacing, replay, simplification, and comprehension validation.</li>
 <li>💎 <strong>Modern Angular 17 UI</strong>: Responsive admin dashboard, interactive task analysis workbench, chart visualizations, and Glassmorphism design aesthetics.</li>
@@ -63,11 +66,13 @@
 <p>Refer to the complete technical specifications and architectural diagrams in <a href="file:///C:/Source/AIFriday/ARCHITECTURE.md">ARCHITECTURE.md</a>.</p>
 <div class="mermaid">
 graph TD
-    Client[Angular 17 SPA Frontend] <--> Gateway[Flask Backend API :5004]
-    Gateway <--> Orchestrator[Multi-Agent Pipeline]
-    Orchestrator <--> MCP[9 MCP Servers]
-    Orchestrator <--> RAG[FAISS Vector DB & Embeddings]
-    MCP <--> DB[(SQLite Database)]
+    Client[Angular 17 SPA Frontend :4204] <--> Gateway[Flask Backend API Gateway :5004]
+    Gateway <--> Guardrail[Domain Scope & Security Guardrails]
+    Guardrail <--> Orchestrator[Parallel Multi-Agent Pipeline]
+    Orchestrator <--> DomainMCP[9 Domain MCP Servers :5004]
+    Orchestrator <--> RAG[FAISS Vector DB & TCS Embeddings]
+    DomainMCP <--> GenericMCP[Standalone Generic SQLite MCP Server :5001]
+    GenericMCP <--> DB[(SQLite Database - task_routing.db)]
 </div>
 
 <hr />
@@ -79,13 +84,13 @@ graph TD
 <li><strong>OS</strong>: Windows / Linux / macOS</li>
 </ul>
 <hr />
-<h3 id="1-start-backend-server">1. Start Backend Server</h3>
+<h3 id="1-start-backend-server-generic-mcp-server">1. Start Backend Server &amp; Generic MCP Server</h3>
 <div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>backend-mcp-task
 setup.bat
 start.bat
 </code></pre></div>
 
-<p><em>The backend API will run on <code>http://localhost:5004</code>.</em></p>
+<p><em>Launches both the Standalone Generic SQLite MCP Server on <code>http://127.0.0.1:5001</code> and Flask Backend API on <code>http://localhost:5004</code>.</em></p>
 <hr />
 <h3 id="2-start-frontend-application">2. Start Frontend Application</h3>
 <div class="codehilite"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>frontend-task-glass
@@ -125,15 +130,18 @@ start.bat
 <hr />
 <h2 id="project-repository-structure">📂 Project Repository Structure</h2>
 <div class="codehilite"><pre><span></span><code><span class="n">AIFriday</span><span class="o">/</span>
-<span class="err">├──</span><span class="w"> </span><span class="n">ARCHITECTURE</span><span class="o">.</span><span class="n">md</span><span class="w">              </span><span class="c1"># Detailed System Architecture &amp; Diagrams</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">ARCHITECTURE</span><span class="o">.</span><span class="n">md</span><span class="w">              </span><span class="c1"># Detailed System Architecture, Sequence Diagrams &amp; ERD</span>
 <span class="err">├──</span><span class="w"> </span><span class="n">README</span><span class="o">.</span><span class="n">md</span><span class="w">                    </span><span class="c1"># Main Repository Guide</span>
 <span class="err">├──</span><span class="w"> </span><span class="n">Question1</span><span class="w">                    </span><span class="c1"># AI Friday Problem Statement Definition</span>
-<span class="err">├──</span><span class="w"> </span><span class="n">backend</span><span class="o">-</span><span class="n">mcp</span><span class="o">-</span><span class="n">task</span><span class="o">/</span><span class="w">            </span><span class="c1"># Flask Backend Server</span>
-<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">agents</span><span class="o">/</span><span class="w">                  </span><span class="c1"># 10 Autonomous AI Agents &amp; Orchestrator</span>
-<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">mcp_servers</span><span class="o">/</span><span class="w">             </span><span class="c1"># 9 Model Context Protocol (MCP) Servers</span>
-<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">app</span><span class="o">.</span><span class="n">py</span><span class="w">                   </span><span class="c1"># Main Flask Gateway &amp; API Endpoints</span>
-<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">database</span><span class="o">.</span><span class="n">py</span><span class="w">              </span><span class="c1"># SQLite Database Initializer &amp; Schemas</span>
+<span class="err">├──</span><span class="w"> </span><span class="n">backend</span><span class="o">-</span><span class="n">mcp</span><span class="o">-</span><span class="n">task</span><span class="o">/</span><span class="w">            </span><span class="c1"># Flask Backend &amp; MCP Server Infrastructure</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">agents</span><span class="o">/</span><span class="w">                  </span><span class="c1"># 10 Autonomous AI Agents, Intent Agent &amp; Orchestrator</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">mcp_servers</span><span class="o">/</span><span class="w">             </span><span class="c1"># Standalone Generic SQLite MCP Server (:5001) &amp; 9 Domain MCP Servers (:5004)</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">app</span><span class="o">.</span><span class="n">py</span><span class="w">                   </span><span class="c1"># Main Flask Gateway &amp; REST API Endpoints</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">database</span><span class="o">.</span><span class="n">py</span><span class="w">              </span><span class="c1"># Database Gateway &amp; Generic MCP Statement Execution</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">mcp_sqlite_server</span><span class="o">.</span><span class="n">py</span><span class="w">     </span><span class="c1"># Generic SQLite MCP Client Gateway</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">guardrails</span><span class="o">.</span><span class="n">py</span><span class="w">            </span><span class="c1"># Privacy &amp; Domain Scope Guardrail Engine</span>
 <span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">rag_service</span><span class="o">.</span><span class="n">py</span><span class="w">           </span><span class="c1"># RAG Vector Store (FAISS) &amp; Embeddings</span>
+<span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">run_app</span><span class="o">.</span><span class="n">py</span><span class="w">               </span><span class="c1"># Unified Launcher for Standalone MCP Server &amp; Flask App</span>
 <span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">task_routing</span><span class="o">.</span><span class="n">db</span><span class="w">          </span><span class="c1"># SQLite Database File</span>
 <span class="err">│</span><span class="w">   </span><span class="err">├──</span><span class="w"> </span><span class="n">setup</span><span class="o">.</span><span class="n">bat</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">start</span><span class="o">.</span><span class="n">bat</span><span class="w">    </span><span class="c1"># Automation Scripts</span>
 <span class="err">│</span><span class="w">   </span><span class="err">└──</span><span class="w"> </span><span class="n">requirements</span><span class="o">.</span><span class="n">txt</span><span class="w">         </span><span class="c1"># Python Dependencies</span>
@@ -153,8 +161,9 @@ start.bat
 <h2 id="key-api-endpoints">🧪 Key API Endpoints</h2>
 <ul>
 <li><strong>POST</strong> <code>/api/auth/login</code> — User authentication &amp; JWT generation.</li>
-<li><strong>POST</strong> <code>/api/task-routing/analyze</code> — Document upload &amp; multi-agent task routing analysis pipeline.</li>
-<li><strong>GET</strong> <code>/api/mcp/&lt;server&gt;/&lt;tool&gt;</code> — Standardized MCP tool endpoints (e.g., <code>/api/mcp/resource/get_available_resources</code>).</li>
+<li><strong>POST</strong> <code>/api/task-routing/analyze</code> — Document upload, scope validation, intent classification &amp; parallel task routing analysis pipeline.</li>
+<li><strong>POST</strong> <code>/api/guardrails/validate</code> — Validate domain scope and prompt injection safety.</li>
+<li><strong>GET</strong> <code>/api/mcp/&lt;server&gt;/&lt;tool&gt;</code> — Standardized domain MCP tool endpoints (e.g., <code>/api/mcp/resource/get_available_resources</code>).</li>
 <li><strong>GET</strong> <code>/api/health</code> — System health check.</li>
 </ul>
 <hr />

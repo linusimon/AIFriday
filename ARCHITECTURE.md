@@ -6,7 +6,13 @@
 
 ## 1. Executive Summary & System Overview
 
-The **Intelligent Task Routing System** is an enterprise-grade AI solution developed for the TCS AI Friday Challenge. It combines **Multi-Agent AI Orchestration**, **Model Context Protocol (MCP)** servers, and **Retrieval-Augmented Generation (RAG)** to automatically analyze project requirements documents, classify tasks, optimize resource allocations (human experts & AI agents), evaluate cost/SLA risks, and provide conversational voice/text assistance with adaptive information chunking.
+The **Intelligent Task Routing System** is an enterprise-grade AI solution developed for the TCS AI Friday Challenge. It combines **Multi-Agent AI Orchestration**, **Model Context Protocol (MCP)** servers (including an independent, reusable **Generic SQLite MCP Server**), and **Retrieval-Augmented Generation (RAG)** to automatically analyze project requirements documents, classify tasks, optimize resource allocations (human experts & AI agents), evaluate cost/SLA risks, generate Agile User Stories & 3-Sprint Execution Plans, and provide conversational voice/text assistance with adaptive information chunking.
+
+### Key Architectural Highlights
+* 🛡️ **Two-Tier Scope & Intent Validation**: Input is evaluated by `PrivacyGuardrail.validate_scope` for security rules (prompt injection, jailbreak, toxicity, SQL injection, PII masking, rate limiting) and business domain scope. If off-topic, a polite guidance response is immediately returned to the UI. Valid inputs are processed by `TaskIntentAgent` to dynamically route requests.
+* ⚡ **Asynchronous Parallel Agent Pipeline**: `AgentOrchestrator` dynamically selects specialist agents based on business intent and executes independent agents (`WorkloadOptimizationAgent`, `CostOptimizationAgent`, `RiskSLAAgent`) asynchronously in parallel using `ThreadPoolExecutor`.
+* 🔌 **Standalone Generic SQLite MCP Server (`:5001`)**: Independent FastMCP server process running on port `5001` (SSE transport) providing application-agnostic database tools (`execute_query`, `execute_statement`, `execute_batch`, `list_tables`, `describe_table`). Has zero domain business logic and can be reused for any SQLite database across external applications.
+* 🧩 **Domain MCP Server Mesh (`:5004`)**: 9 specialized Flask Blueprint tool servers (`resource`, `skill`, `policy`, `expert`, `performance`, `sla`, `cost`, `project`, `analytics`) that process domain operations and execute SQL via the generic SQLite MCP execution engine.
 
 ---
 
@@ -22,27 +28,32 @@ graph TD
         OCR[OCR & File Upload Module]
     end
 
-    subgraph API Gateway & Service Layer [Flask Backend :5004]
-        Flask[Flask Application & REST Gateway]
+    subgraph API Gateway & Guardrail Layer [Flask Backend :5004]
+        Flask[Flask Application Gateway :5004]
         JWT[JWT Authentication Interceptor]
-        Router[Task Analysis API & Endpoint Routers]
+        Guardrail[PrivacyGuardrail & Scope Validator]
     end
 
     subgraph Multi-Agent Orchestration Layer
+        IntentAgent[0. Task Intent Classification Agent]
         Orchestrator[Multi-Agent Pipeline Orchestrator]
         A1[1. Document Analysis Agent]
         A2[2. Data Cleansing Agent]
         A3[3. Task Classification Agent]
         A4[4. Data Enrichment / RAG Agent]
         A5[5. Resource Matching Agent]
-        A6[6. Workload Optimization Agent]
-        A7[7. Cost Optimization Agent]
-        A8[8. Risk & SLA Agent]
+        
+        subgraph Parallel Async Workers [ThreadPoolExecutor]
+            A6[6. Workload Optimization Agent]
+            A7[7. Cost Optimization Agent]
+            A8[8. Risk & SLA Agent]
+        end
+        
         A9[9. Decision Synthesis Agent]
-        A10[10. Summary Agent]
+        A10[10. Summary & Agile Execution Plan Agent]
     end
 
-    subgraph MCP Server Mesh [Model Context Protocol]
+    subgraph Domain MCP Server Mesh [Port :5004]
         MCP_Res[Resource Mgmt Server]
         MCP_Skill[Skill Repository Server]
         MCP_Pol[Policy Mgmt Server]
@@ -54,6 +65,10 @@ graph TD
         MCP_Analytics[Analytics Server]
     end
 
+    subgraph Standalone MCP Layer [FastMCP SSE :5001]
+        GenericMCP[Generic SQLite MCP Server :5001]
+    end
+
     subgraph Data & Storage Layer
         DB[(SQLite Database - task_routing.db)]
         FAISS[(FAISS Vector DB Index)]
@@ -62,33 +77,27 @@ graph TD
 
     UI -->|HTTP / REST / JWT| Flask
     Flask --> JWT
-    Flask --> Router
-    Router --> Orchestrator
+    Flask --> Guardrail
+    Guardrail -->|Off-Topic / Violation| UI
+    Guardrail -->|Valid Business Scope| IntentAgent
+    IntentAgent --> Orchestrator
 
-    Orchestrator --> A1 --> A2 --> A3 --> A4 --> A5 --> A6 --> A7 --> A8 --> A9 --> A10
+    Orchestrator --> A1 --> A2 --> A3 --> A4 --> A5
+    A5 --> Parallel
+    Parallel --> A6 & A7 & A8
+    A6 & A7 & A8 --> A9 --> A10
 
     A4 <--> FAISS
     A4 <--> TCS_Embed
 
-    A5 <--> MCP_Res
     A5 <--> MCP_Skill
     A6 <--> MCP_Res
-    A6 <--> MCP_Hist
     A7 <--> MCP_Cost
-    A8 <--> MCP_SLA
-    A8 <--> MCP_Pol
-    A9 <--> MCP_Exp
-    A9 <--> MCP_Proj
+    A8 <--> MCP_SLA & MCP_Pol
+    A9 <--> MCP_Exp & MCP_Proj & MCP_Analytics
 
-    MCP_Res <--> DB
-    MCP_Skill <--> DB
-    MCP_Pol <--> DB
-    MCP_Exp <--> DB
-    MCP_SLA <--> DB
-    MCP_Cost <--> DB
-    MCP_Hist <--> DB
-    MCP_Proj <--> DB
-    MCP_Analytics <--> DB
+    MCP_Res & MCP_Skill & MCP_Pol & MCP_Exp & MCP_SLA & MCP_Cost & MCP_Hist & MCP_Proj & MCP_Analytics <--> GenericMCP
+    GenericMCP <--> DB
 ```
 
 ---
@@ -107,30 +116,36 @@ graph LR
 
     subgraph Backend Core Services
         Svc_Auth[JWT Auth Blueprint /auth/login]
+        Svc_Guard[Scope & Security Guardrail Engine]
         Svc_Analyze[Task Routing Blueprint /analyze]
-        Svc_MCP[MCP Gateway Router /api/mcp]
         Svc_RAG[RAG Service Vector Store Engine]
     end
 
-    subgraph Data & Pipeline Operations
-        Pipeline[Agent Execution Pipeline]
-        MCP_Mesh[9 MCP Tool Servers]
+    subgraph Execution & MCP Layer
+        Intent[Task Intent Agent]
+        Orchestration[Parallel ThreadPool Orchestrator]
+        DomainMCP[9 Domain MCP Blueprints :5004]
+        GenericMCP[Standalone SQLite MCP Server :5001]
+    end
+
+    subgraph Storage Layer
         VectorDB[FAISS Index Vector Database]
-        RelationalDB[SQLite Database File]
+        RelationalDB[SQLite Database File - task_routing.db]
     end
 
     Comp_Upload -->|Document Payload| Svc_Analyze
-    Svc_Analyze -->|Trigger| Pipeline
-    Pipeline -->|Query Policies & SOPs| Svc_RAG
+    Svc_Analyze -->|Evaluate Scope| Svc_Guard
+    Svc_Guard -->|Pass| Intent
+    Intent -->|Classify Intent & Launch| Orchestration
+    Orchestration -->|Vector Query| Svc_RAG
     Svc_RAG -->|Similarity Search| VectorDB
-    Pipeline -->|Tool Call Execution| Svc_MCP
-    Svc_MCP -->|Read/Write Operations| MCP_Mesh
-    MCP_Mesh -->|SQL Transactions| RelationalDB
-    Pipeline -->|Aggregated Task Plan| Svc_Analyze
-    Svc_Analyze -->|Structured Analysis JSON| Comp_Results
+    Orchestration -->|Domain Tool Invocation| DomainMCP
+    DomainMCP -->|Generic execute_query / execute_statement| GenericMCP
+    GenericMCP -->|SQL Connection & Transaction| RelationalDB
+    Orchestration -->|Structured Analysis JSON| Comp_Results
     Comp_Results -->|Render Metrics| Comp_Charts
     Comp_Results -->|Text/Speech Output| Comp_Voice
-    Comp_Chat -->|Conversational Q&A| Svc_MCP
+    Comp_Chat -->|Conversational Q&A| Svc_Analyze
 ```
 
 ---
@@ -143,22 +158,23 @@ graph TB
         Browser[Web Browser - Angular 17 SPA :4204]
     end
 
-    subgraph Host Machine Environment [Windows / Linux]
+    subgraph Host Machine Environment [Windows / Linux / macOS]
         subgraph Frontend Node Environment
-            AngularDev[Angular Dev Server / Node.js Engine]
+            AngularDev[Angular Dev Server / Node.js Engine :4204]
             Proxy[Angular HTTP Proxy Config :4204 -> :5004]
         end
 
         subgraph Python Virtual Environment
-            FlaskApp[Flask WSGI / Gunicorn App :5004]
+            FlaskApp[Flask WSGI Backend Server :5004]
             AgentRunner[Agent Orchestrator Worker Pool]
-            MCPRegistry[MCP Server Blueprints Registry]
+            DomainMCP[9 Domain MCP Blueprints :5004]
+            FastMCPProcess[Standalone FastMCP SQLite Server Process :5001]
         end
 
         subgraph Local File System Storage
             UploadsDir[uploads/ Directory]
             FaissDir[faiss_index/ Storage]
-            SQLiteFile[data/task_routing.db]
+            SQLiteFile[task_routing.db]
         end
     end
 
@@ -170,161 +186,181 @@ graph TB
     AngularDev --> Proxy
     Proxy -->|Forward REST Calls| FlaskApp
     FlaskApp --> AgentRunner
-    FlaskApp --> MCPRegistry
+    FlaskApp --> DomainMCP
     AgentRunner -->|Store Uploads| UploadsDir
     AgentRunner -->|Embeddings & RAG| GenAI_API
     AgentRunner -->|Index Queries| FaissDir
-    MCPRegistry -->|Database Reads/Writes| SQLiteFile
+    DomainMCP -->|HTTP / SSE Generic MCP Calls| FastMCPProcess
+    FastMCPProcess -->|Direct SQLite Reads/Writes| SQLiteFile
 ```
 
 ---
 
-## 5. Voice & Information Chunking State Machine Architecture
-
-```mermaid
-stateDiagram-v2
-    [*] --> Idle: User Opens Chat / Voice Assistant
-    Idle --> Listening: Speech / Text Input Triggered
-    Listening --> Processing: User Utterance Captured
-    Processing --> Segmenting: Agent Generates Full Response
-    
-    state Segmenting {
-        [*] --> SplitChunks: Divide Text into Micro-Chunks
-        SplitChunks --> OrderChunks: Sequence by Priority & Context
-    }
-
-    Segmenting --> PresentingChunk: Deliver Chunk N (Audio + Highlighted Text)
-
-    state PresentingChunk {
-        [*] --> SpeakingText: TTS Playback Active
-        SpeakingText --> AwaitingFeedback: Audio Finish / Pause
-    }
-
-    AwaitingFeedback --> ComprehensionCheck: System Prompts ("Did that make sense?")
-    
-    ComprehensionCheck --> PresentingChunk: User says "Repeat" / "Replay" (Replay current chunk)
-    ComprehensionCheck --> SimplifyingChunk: User says "Explain simpler" / "Confused"
-    ComprehensionCheck --> PresentingChunk: User says "Yes" / "Next" (Advance to Chunk N+1)
-    
-    SimplifyingChunk --> PresentingChunk: Re-present simplified chunk text
-
-    AwaitingFeedback --> Completed: All Chunks Delivered & Confirmed
-    Completed --> Idle: Wait for next query
-```
-
----
-
-## 6. Multi-Agent Execution Sequence Flow
+## 5. Multi-Agent Execution Sequence Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as User / Admin
-    participant Gateway as Flask Backend Gateway
+    actor User as User / Frontend UI
+    participant Gateway as Flask Gateway (:5004)
+    participant Guard as Scope Guardrail Engine
+    participant Intent as Intent Classification Agent
     participant Orchestrator as Agent Orchestrator
     participant RAG as RAG & FAISS Vector Service
-    participant MCP as MCP Server Mesh
+    participant DomainMCP as Domain MCP Servers (:5004)
+    participant GenericMCP as Generic SQLite MCP Server (:5001)
     participant DB as SQLite DB
 
-    User->>Gateway: POST /api/task-routing/analyze (Upload Requirement Doc)
-    Gateway->>Orchestrator: Execute Multi-Agent Task Routing Workflow
+    User->>Gateway: POST /api/task-routing/analyze (Document / Text Query)
+    Gateway->>Guard: Validate Domain Scope & Security Rules
+    
+    alt Off-Topic / Security Violation
+        Guard-->>Gateway: Blocked (Scope Violation / Prompt Injection)
+        Gateway-->>User: Refusal & Guidance Response
+    else Valid Business Scope
+        Guard->>Intent: Classify User Intent & Requirements
+        Intent-->>Orchestrator: Categorized Intent (e.g., FULL_TASK_ROUTING_ANALYSIS)
+        
+        rect rgb(240, 248, 255)
+            note right of Orchestrator: Phase 1: Sequential Parsing & Classification
+            Orchestrator->>Orchestrator: 1. Document Analysis Agent (Extract raw requirements)
+            Orchestrator->>Orchestrator: 2. Data Cleansing Agent (Normalize & format text)
+            Orchestrator->>Orchestrator: 3. Task Classification Agent (Decompose into granular tasks)
+        end
 
-    rect rgb(240, 248, 255)
-        note right of Orchestrator: Step 1: Document Processing
-        Orchestrator->>Orchestrator: 1. Document Analysis Agent (Extract raw sections)
-        Orchestrator->>Orchestrator: 2. Data Cleansing Agent (Normalize & format text)
-        Orchestrator->>Orchestrator: 3. Task Classification Agent (Decompose into granular tasks)
+        rect rgb(255, 245, 238)
+            note right of Orchestrator: Phase 2: RAG Enrichment & Skill Matching
+            Orchestrator->>RAG: 4. Data Enrichment Agent (Vector search for SOPs & policies)
+            RAG-->>Orchestrator: Contextual policies & domain knowledge
+            Orchestrator->>DomainMCP: 5. Resource Matching Agent (Query skill repository)
+            DomainMCP->>GenericMCP: execute_query("SELECT * FROM human_resources...", params)
+            GenericMCP->>DB: Execute SQL query
+            DB-->>GenericMCP: Rows
+            GenericMCP-->>DomainMCP: JSON Rows
+            DomainMCP-->>Orchestrator: Ranked resource-skill fit scores
+        end
+
+        rect rgb(240, 255, 240)
+            note right of Orchestrator: Phase 3: Parallel Asynchronous Workers (ThreadPoolExecutor)
+            par Workload Optimization
+                Orchestrator->>DomainMCP: 6. Workload Optimization Agent (Check capacity & workload)
+                DomainMCP->>GenericMCP: execute_query(...)
+                GenericMCP-->>DomainMCP: Workload metrics
+            and Cost Optimization
+                Orchestrator->>DomainMCP: 7. Cost Optimization Agent (Estimate resource & agent costs)
+                DomainMCP->>GenericMCP: execute_query(...)
+                GenericMCP-->>DomainMCP: Cost estimates
+            and Risk & SLA Assessment
+                Orchestrator->>DomainMCP: 8. Risk & SLA Agent (Assess SLA compliance & risk rating)
+                DomainMCP->>GenericMCP: execute_query(...)
+                GenericMCP-->>DomainMCP: SLA breach risks
+            end
+        end
+
+        rect rgb(255, 250, 240)
+            note right of Orchestrator: Phase 4: Decision Synthesis & Output Generation
+            Orchestrator->>Orchestrator: 9. Decision Synthesis Agent (Consolidate optimal assignments)
+            Orchestrator->>Orchestrator: 10. Summary Agent & Project Execution Agent (Generate Agile Plan & Executive Brief)
+        end
+
+        Orchestrator-->>Gateway: Consolidated Analysis Result JSON
+        Gateway-->>User: Structured Response (Tasks, Assignments, Charts, Sprint Roadmap, Costs, Risks)
     end
-
-    rect rgb(255, 245, 238)
-        note right of Orchestrator: Step 2: RAG Enrichment & Skill Matching
-        Orchestrator->>RAG: 4. Data Enrichment Agent (Search vector index for contextual SOPs)
-        RAG-->>Orchestrator: Contextual policies & domain knowledge
-        Orchestrator->>MCP: 5. Resource Matching Agent (Query skill matching tool)
-        MCP->>DB: Query available resources & skill matrix
-        DB-->>MCP: Candidate resources
-        MCP-->>Orchestrator: Ranked resource-skill fit scores
-    end
-
-    rect rgb(240, 255, 240)
-        note right of Orchestrator: Step 3: Workload, Cost & Risk Analysis
-        Orchestrator->>MCP: 6. Workload Optimization Agent (Check capacity & balance)
-        Orchestrator->>MCP: 7. Cost Optimization Agent (Estimate resource & agent costs)
-        Orchestrator->>MCP: 8. Risk & SLA Agent (Assess SLA compliance & risk rating)
-    end
-
-    rect rgb(255, 250, 240)
-        note right of Orchestrator: Step 4: Decision Synthesis & Output
-        Orchestrator->>MCP: 9. Decision Synthesis Agent (Consolidate optimal assignment)
-        Orchestrator->>Orchestrator: 10. Summary Agent (Generate Executive Brief & Action Plan)
-    end
-
-    Orchestrator-->>Gateway: Consolidated Analysis Result JSON
-    Gateway-->>User: Structured Response (Tasks, Assignments, Charts, Costs, Risks)
 ```
 
 ---
 
-## 7. Model Context Protocol (MCP) Server Specification
+## 6. Model Context Protocol (MCP) Server Specification
 
-| MCP Server | Key Capabilities & Exposed Tools |
-| :--- | :--- |
-| **Resource Management** | `get_available_resources`, `get_resource_workload`, `update_workload`, `get_resource_skills` |
-| **Skill Repository** | `match_skills`, `search_skills_by_category`, `get_all_skills`, `evaluate_skill_gap` |
-| **Policy Management** | `search_policies`, `check_policy_compliance`, `get_escalation_rules` |
-| **Expert Knowledge** | `search_expert_insights`, `get_similar_historical_tasks`, `recommend_approach` |
-| **SLA Management** | `verify_sla_compliance`, `calculate_target_deadline`, `get_sla_rules` |
-| **Cost Optimization** | `estimate_assignment_cost`, `calculate_agent_vs_human_cost`, `optimize_budget` |
-| **Historical Performance** | `get_resource_performance_history`, `get_completion_rate`, `get_quality_score` |
-| **Project Management** | `get_active_projects`, `create_project_task`, `update_task_status` |
-| **Analytics** | `generate_utilization_metrics`, `get_cost_breakdown_analytics`, `get_risk_summary` |
+| MCP Server | Hosting / Port | Capabilities & Exposed Tools |
+| :--- | :--- | :--- |
+| **Generic SQLite MCP Server** | Standalone FastMCP (`:5001`) | `execute_query` (SELECT), `execute_statement` (INSERT/UPDATE/DELETE/DDL), `execute_batch` (transactions), `list_tables`, `describe_table` |
+| **Resource Management** | Flask Blueprint (`:5004`) | `get_available_resources`, `get_current_workload`, `get_resource_skills`, `get_resource_capacity` |
+| **Skill Repository** | Flask Blueprint (`:5004`) | `search_skills`, `match_skills`, `get_skill_profiles` |
+| **Policy Management** | Flask Blueprint (`:5004`) | `search_policies`, `get_business_rules`, `get_escalation_rules` |
+| **Expert Knowledge** | Flask Blueprint (`:5004`) | `search_expert_recommendations`, `get_historical_guidance`, `get_expert_by_category` |
+| **SLA Management** | Flask Blueprint (`:5004`) | `get_sla_requirements`, `predict_breach_risk`, `check_sla_compliance` |
+| **Cost Optimization** | Flask Blueprint (`:5004`) | `estimate_assignment_cost`, `compare_assignment_options`, `get_cost_optimization_recommendations` |
+| **Historical Performance** | Flask Blueprint (`:5004`) | `get_historical_assignments`, `get_success_rates`, `get_quality_scores` |
+| **Project Management** | Flask Blueprint (`:5004`) | `get_project_details`, `get_project_status`, `get_task_information`, `get_tasks_by_status` |
+| **Analytics** | Flask Blueprint (`:5004`) | `find_similar_tasks`, `recommend_best_resource`, `generate_utilization_metrics` |
 
 ---
 
-## 8. Database Entity Relationship Diagram
+## 7. Database Entity Relationship Diagram
 
 ```mermaid
 erDiagram
     PROJECTS ||--o{ TASKS : contains
-    RESOURCES ||--o{ TASK_ASSIGNMENTS : assigned_to
-    TASKS ||--o{ TASK_ASSIGNMENTS : receives
-    KNOWLEDGE_BASE ||--o{ RAG_EMBEDDINGS : indexed_by
+    RESOURCES ||--o{ HISTORICAL_ASSIGNMENTS : assigned_to
+    TASKS ||--o{ HISTORICAL_ASSIGNMENTS : receives
+    TASKS ||--o{ ROUTING_DECISIONS : produces
+    PROJECTS ||--o{ PROJECT_EXECUTION_PLANS : generates
     SLA_RULES ||--o{ TASKS : governs
     COST_MODELS ||--o{ RESOURCES : applies_to
+    CHAT_SESSIONS ||--o{ CHAT_MESSAGES : contains
+
+    USERS {
+        int id PK
+        string username
+        string password_hash
+        string role
+    }
 
     PROJECTS {
-        int id PK
-        string name
-        string description
+        int project_id PK
+        string project_name
+        string priority
         string status
-        datetime created_at
+        string business_area
+        string sla
     }
 
     TASKS {
-        int id PK
+        int task_id PK
         int project_id FK
         string task_name
+        string description
+        string skills_required
         string complexity
-        int estimated_hours
+        float estimated_effort
+        string priority
         string status
     }
 
     RESOURCES {
-        int id PK
+        int resource_id PK
         string name
-        string type "human / ai_agent"
         string role
-        string skills_json
-        float hourly_rate
-        int current_workload
-        int max_capacity
+        string skills
+        int experience
+        string availability
+        float current_workload
+        float quality_score
+        float performance_score
+        float cost_per_hour
     }
 
-    KNOWLEDGE_BASE {
-        int id PK
-        string title
-        string document_type
-        string content
-        string tags
+    AI_AGENTS {
+        int agent_id PK
+        string agent_name
+        string capabilities
+        string specialization
+        string availability
+        float performance_score
+        float quality_score
+        float cost_per_hour
+    }
+
+    PROJECT_EXECUTION_PLANS {
+        int plan_id PK
+        string plan_name
+        int total_user_stories
+        int total_story_points
+        float total_effort_hours
+        float total_cost
+        int sprint_count
+        string user_stories_json
+        string timeline_json
     }
 ```
