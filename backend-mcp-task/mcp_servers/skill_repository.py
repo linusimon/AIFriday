@@ -1,28 +1,16 @@
 """
 Skill Repository MCP Server
-Provides tools for skill search and matching
+Provides tools for skill search and matching using generic SQLite MCP database operations.
 """
 from mcp_servers import MCPServer
-from database import get_db_connection
+from database import execute_query
 from typing import List, Dict
 
 # Create MCP server instance
 skill_server = MCPServer("skill", "Skill Repository Server")
 
 def search_skills(query) -> List[Dict]:
-    """
-    Search for resources with specific skills
-    
-    Args:
-        query: Skill search query (comma-separated, list, or single skill)
-    
-    Returns:
-        List of resources matching the skill query
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Normalize query
+    """Search for resources with specific skills using generic MCP query execution."""
     if isinstance(query, str):
         skills = [s.strip().lower() for s in query.split(',')]
     elif isinstance(query, (list, set)):
@@ -33,12 +21,9 @@ def search_skills(query) -> List[Dict]:
     resources = []
     
     # Search human resources
-    cursor.execute("SELECT * FROM human_resources")
-    for row in cursor.fetchall():
-        resource = dict(row)
+    human_rows = execute_query("SELECT * FROM human_resources")
+    for resource in human_rows:
         resource_skills = [s.strip().lower() for s in resource['skills'].split(',')]
-        
-        # Check if any of the queried skills match
         matches = [skill for skill in skills if any(skill in rs for rs in resource_skills)]
         if matches:
             resource['matched_skills'] = matches
@@ -46,12 +31,9 @@ def search_skills(query) -> List[Dict]:
             resources.append(resource)
     
     # Search AI agents
-    cursor.execute("SELECT * FROM ai_agents")
-    for row in cursor.fetchall():
-        agent = dict(row)
+    ai_rows = execute_query("SELECT * FROM ai_agents")
+    for agent in ai_rows:
         agent_skills = [s.strip().lower() for s in agent['capabilities'].split(',')]
-        
-        # Check if any of the queried skills match
         matches = [skill for skill in skills if any(skill in ags for ags in agent_skills)]
         if matches:
             agent['matched_skills'] = matches
@@ -59,23 +41,10 @@ def search_skills(query) -> List[Dict]:
             agent['skills'] = agent['capabilities']
             resources.append(agent)
     
-    conn.close()
     return resources
 
 def match_skills(required_skills) -> List[Dict]:
-    """
-    Match required skills against available resources and calculate match scores
-    
-    Args:
-        required_skills: Comma-separated list or list/set of required skills
-    
-    Returns:
-        List of resources with match scores (0-100)
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Parse required skills
+    """Match required skills against available resources using generic MCP query execution."""
     if isinstance(required_skills, str):
         required = set([s.strip().lower() for s in required_skills.split(',')])
     elif isinstance(required_skills, (list, set)):
@@ -86,12 +55,9 @@ def match_skills(required_skills) -> List[Dict]:
     matches = []
     
     # Match human resources
-    cursor.execute("SELECT * FROM human_resources WHERE availability = 'Available'")
-    for row in cursor.fetchall():
-        resource = dict(row)
+    human_rows = execute_query("SELECT * FROM human_resources WHERE availability = 'Available'")
+    for resource in human_rows:
         resource_skills = set([s.strip().lower() for s in resource['skills'].split(',')])
-        
-        # Calculate match score
         matched = required & resource_skills
         match_score = (len(matched) / len(required)) * 100 if required else 0
         
@@ -103,12 +69,9 @@ def match_skills(required_skills) -> List[Dict]:
             matches.append(resource)
     
     # Match AI agents
-    cursor.execute("SELECT * FROM ai_agents WHERE availability = 'Available'")
-    for row in cursor.fetchall():
-        agent = dict(row)
+    ai_rows = execute_query("SELECT * FROM ai_agents WHERE availability = 'Available'")
+    for agent in ai_rows:
         agent_skills = set([s.strip().lower() for s in agent['capabilities'].split(',')])
-        
-        # Calculate match score
         matched = required & agent_skills
         match_score = (len(matched) / len(required)) * 100 if required else 0
         
@@ -121,29 +84,13 @@ def match_skills(required_skills) -> List[Dict]:
             agent['name'] = agent['agent_name']
             matches.append(agent)
     
-    conn.close()
-    
-    # Sort by match score descending
     matches.sort(key=lambda x: x['match_score'], reverse=True)
-    
     return matches
 
 def get_skill_profiles(resource_id: int, resource_type: str = 'human') -> Dict:
-    """
-    Get detailed skill profile for a specific resource
-    
-    Args:
-        resource_id: Resource ID
-        resource_type: 'human' or 'ai'
-    
-    Returns:
-        Detailed skill profile
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+    """Get detailed skill profile for a specific resource using generic MCP query execution."""
     if resource_type == 'human':
-        cursor.execute("""
+        rows = execute_query("""
             SELECT 
                 resource_id as id,
                 name,
@@ -154,9 +101,9 @@ def get_skill_profiles(resource_id: int, resource_type: str = 'human') -> Dict:
                 performance_score
             FROM human_resources
             WHERE resource_id = ?
-        """, (resource_id,))
+        """, [resource_id])
     else:
-        cursor.execute("""
+        rows = execute_query("""
             SELECT 
                 agent_id as id,
                 agent_name as name,
@@ -166,13 +113,10 @@ def get_skill_profiles(resource_id: int, resource_type: str = 'human') -> Dict:
                 performance_score
             FROM ai_agents
             WHERE agent_id = ?
-        """, (resource_id,))
+        """, [resource_id])
     
-    resource = cursor.fetchone()
-    conn.close()
-    
-    if resource:
-        profile = dict(resource)
+    if rows:
+        profile = rows[0]
         profile['skills_list'] = [s.strip() for s in profile['skills'].split(',')]
         profile['type'] = resource_type
         return profile

@@ -1,26 +1,41 @@
 """
 Database models and initialization for Intelligent Task Routing System
+Powered by Standalone Generic SQLite MCP Server Gateway
 """
 import sqlite3
 import bcrypt
 import json
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from config import Config
+from mcp_sqlite_server import MCPSqliteClient
+
+# Global MCP Client instance pointing to generic SQLite MCP Server
+mcp_client = MCPSqliteClient(db_path=Config.DATABASE_PATH)
+
+def execute_query(sql: str, params: Optional[List[Any]] = None) -> List[Dict[str, Any]]:
+    """Execute a read SQL query (SELECT) via generic SQLite MCP client."""
+    return mcp_client.execute_query(sql, params)
+
+def execute_statement(sql: str, params: Optional[List[Any]] = None) -> Dict[str, Any]:
+    """Execute a write/update SQL statement (INSERT, UPDATE, DELETE, DDL) via generic SQLite MCP client."""
+    return mcp_client.execute_statement(sql, params)
+
+def execute_batch(statements: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Execute a batch of SQL statements via generic SQLite MCP client."""
+    return mcp_client.execute_batch(statements)
 
 def get_db_connection():
-    """Create and return a database connection"""
+    """Create and return a direct database connection for legacy callers"""
     conn = sqlite3.connect(Config.DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_database():
-    """Initialize the database with required tables and sample data"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    """Initialize the database with required tables and sample data via generic MCP statement execution"""
     
-    # Create Users table
-    cursor.execute('''
+    # 1. Create Users table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -30,8 +45,8 @@ def init_database():
         )
     ''')
     
-    # Create HumanResources table
-    cursor.execute('''
+    # 2. Create HumanResources table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS human_resources (
             resource_id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -47,8 +62,8 @@ def init_database():
         )
     ''')
     
-    # Create AIAgents table
-    cursor.execute('''
+    # 3. Create AIAgents table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS ai_agents (
             agent_id INTEGER PRIMARY KEY AUTOINCREMENT,
             agent_name TEXT NOT NULL,
@@ -62,8 +77,8 @@ def init_database():
         )
     ''')
     
-    # Create Projects table
-    cursor.execute('''
+    # 4. Create Projects table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS projects (
             project_id INTEGER PRIMARY KEY AUTOINCREMENT,
             project_name TEXT NOT NULL,
@@ -75,8 +90,8 @@ def init_database():
         )
     ''')
     
-    # Create Tasks table
-    cursor.execute('''
+    # 5. Create Tasks table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS tasks (
             task_id INTEGER PRIMARY KEY AUTOINCREMENT,
             project_id INTEGER,
@@ -92,8 +107,8 @@ def init_database():
         )
     ''')
     
-    # Create HistoricalAssignments table
-    cursor.execute('''
+    # 6. Create HistoricalAssignments table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS historical_assignments (
             assignment_id INTEGER PRIMARY KEY AUTOINCREMENT,
             task_id INTEGER,
@@ -107,8 +122,8 @@ def init_database():
         )
     ''')
     
-    # Create SLARules table
-    cursor.execute('''
+    # 7. Create SLARules table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS sla_rules (
             sla_id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL,
@@ -119,8 +134,8 @@ def init_database():
         )
     ''')
     
-    # Create CostModels table
-    cursor.execute('''
+    # 8. Create CostModels table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS cost_models (
             cost_id INTEGER PRIMARY KEY AUTOINCREMENT,
             resource_type TEXT NOT NULL,
@@ -130,8 +145,8 @@ def init_database():
         )
     ''')
     
-    # Create ExpertAnalysis table
-    cursor.execute('''
+    # 9. Create ExpertAnalysis table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS expert_analysis (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL,
@@ -143,8 +158,8 @@ def init_database():
         )
     ''')
 
-    # Create ProjectExecutionPlans table
-    cursor.execute('''
+    # 10. Create ProjectExecutionPlans table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS project_execution_plans (
             plan_id INTEGER PRIMARY KEY AUTOINCREMENT,
             plan_name TEXT NOT NULL,
@@ -164,8 +179,8 @@ def init_database():
         )
     ''')
     
-    # Create RoutingDecisions table
-    cursor.execute('''
+    # 11. Create RoutingDecisions table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS routing_decisions (
             decision_id INTEGER PRIMARY KEY AUTOINCREMENT,
             task_id INTEGER,
@@ -178,8 +193,8 @@ def init_database():
         )
     ''')
     
-    # Create ChatSessions table
-    cursor.execute('''
+    # 12. Create ChatSessions table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS chat_sessions (
             session_id INTEGER PRIMARY KEY AUTOINCREMENT,
             decision_id INTEGER,
@@ -189,8 +204,8 @@ def init_database():
         )
     ''')
     
-    # Create ChatMessages table
-    cursor.execute('''
+    # 13. Create ChatMessages table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS chat_messages (
             message_id INTEGER PRIMARY KEY AUTOINCREMENT,
             session_id INTEGER,
@@ -201,8 +216,8 @@ def init_database():
         )
     ''')
     
-    # Create AuditLogs table for GDPR Guardrail evaluation audit trail
-    cursor.execute('''
+    # 14. Create AuditLogs table
+    execute_statement('''
         CREATE TABLE IF NOT EXISTS audit_logs (
             log_id TEXT PRIMARY KEY,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -213,53 +228,51 @@ def init_database():
             status TEXT NOT NULL
         )
     ''')
-    
-    conn.commit()
-    
-    # Check if admin user exists, if not create it
-    cursor.execute("SELECT id FROM users WHERE username = 'admin'")
-    admin = cursor.fetchone()
-    
-    if not admin:
-        # Create default admin user (password: admin123)
-        password_hash = bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        cursor.execute(
-            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-            ("admin", password_hash, "admin")
-        )
-        conn.commit()
-        print("[DATABASE] Created default admin user (username: admin, password: admin123)")
-    
-    # Check if regular user exists, if not create it
-    cursor.execute("SELECT id FROM users WHERE username = 'user'")
-    regular_user = cursor.fetchone()
-    
-    if not regular_user:
-        # Create default regular user (password: user123)
-        password_hash = bcrypt.hashpw("user123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        cursor.execute(
-            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
-            ("user", password_hash, "user")
-        )
-        conn.commit()
-        print("[DATABASE] Created default regular user (username: user, password: user123)")
-    
-    # Seed data if tables are empty
-    cursor.execute("SELECT COUNT(*) as count FROM human_resources")
-    count = cursor.fetchone()['count']
-    
-    if count == 0:
-        seed_sample_data(cursor)
-        conn.commit()
-        print("[DATABASE] Seeded sample data")
-    
-    conn.close()
-    print("[DATABASE] Database initialized successfully")
 
-def seed_sample_data(cursor):
-    """Seed the database with realistic sample data"""
+    # 15. Create GDPR audit trail table
+    execute_statement('''
+        CREATE TABLE IF NOT EXISTS gdpr_audit_trail (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT,
+            action_type TEXT,
+            identifier_hash TEXT,
+            status TEXT,
+            details TEXT
+        )
+    ''')
+
+    # Ensure admin user exists
+    admin = execute_query("SELECT id FROM users WHERE username = 'admin'")
+    if not admin:
+        password_hash = bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        execute_statement(
+            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+            ["admin", password_hash, "admin"]
+        )
+        print("[DATABASE] Created default admin user (username: admin, password: admin123)")
+
+    # Ensure regular user exists
+    regular_user = execute_query("SELECT id FROM users WHERE username = 'user'")
+    if not regular_user:
+        password_hash = bcrypt.hashpw("user123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        execute_statement(
+            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+            ["user", password_hash, "user"]
+        )
+        print("[DATABASE] Created default regular user (username: user, password: user123)")
+
+    # Seed sample data if empty
+    hr_rows = execute_query("SELECT COUNT(*) as count FROM human_resources")
+    if not hr_rows or hr_rows[0]['count'] == 0:
+        seed_sample_data()
+        print("[DATABASE] Seeded sample data via generic MCP statements")
+
+    print("[DATABASE] Database initialized successfully via generic SQLite MCP Server engine")
+
+def seed_sample_data():
+    """Seed the database with realistic sample data via generic MCP statement batching"""
     
-    # Seed HumanResources
+    # HumanResources
     human_resources = [
         ("John Smith", "Senior Developer", "Python,Java,SQL,Machine Learning", 8, "Available", 45, 92, 90, 75),
         ("Sarah Johnson", "Full Stack Developer", "React,Node.js,MongoDB,AWS", 5, "Available", 60, 88, 87, 65),
@@ -283,13 +296,14 @@ def seed_sample_data(cursor):
         ("Amanda Hall", "Scrum Master", "Agile,Scrum,Team Facilitation,Coaching", 8, "Available", 60, 89, 87, 70),
     ]
     
-    cursor.executemany('''
-        INSERT INTO human_resources 
-        (name, role, skills, experience, availability, current_workload, quality_score, performance_score, cost_per_hour)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', human_resources)
+    for hr in human_resources:
+        execute_statement('''
+            INSERT INTO human_resources 
+            (name, role, skills, experience, availability, current_workload, quality_score, performance_score, cost_per_hour)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', list(hr))
     
-    # Seed AIAgents
+    # AIAgents
     ai_agents = [
         ("CodeGen AI", "Code Generation,Code Review,Refactoring", "Backend Development", "Available", 95, 92, 8),
         ("DataAnalyzer AI", "Data Analysis,Statistical Modeling,Visualization", "Data Science", "Available", 93, 90, 10),
@@ -303,13 +317,14 @@ def seed_sample_data(cursor):
         ("DataCleaner AI", "Data Cleaning,Data Validation,Data Transformation", "Data Engineering", "Available", 90, 88, 7),
     ]
     
-    cursor.executemany('''
-        INSERT INTO ai_agents 
-        (agent_name, capabilities, specialization, availability, performance_score, quality_score, cost_per_hour)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', ai_agents)
+    for agent in ai_agents:
+        execute_statement('''
+            INSERT INTO ai_agents 
+            (agent_name, capabilities, specialization, availability, performance_score, quality_score, cost_per_hour)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', list(agent))
     
-    # Seed Projects
+    # Projects
     projects = [
         ("E-Commerce Platform Redesign", "High", "In Progress", "Retail", "7 days"),
         ("Customer Analytics Dashboard", "Medium", "Planning", "Analytics", "14 days"),
@@ -318,12 +333,13 @@ def seed_sample_data(cursor):
         ("HR Management System", "Medium", "On Hold", "Human Resources", "21 days"),
     ]
     
-    cursor.executemany('''
-        INSERT INTO projects (project_name, priority, status, business_area, sla)
-        VALUES (?, ?, ?, ?, ?)
-    ''', projects)
+    for proj in projects:
+        execute_statement('''
+            INSERT INTO projects (project_name, priority, status, business_area, sla)
+            VALUES (?, ?, ?, ?, ?)
+        ''', list(proj))
     
-    # Seed Tasks
+    # Tasks
     tasks = [
         (1, "Implement Payment Gateway Integration", "Integrate Stripe payment processing with existing checkout flow", "Python,REST APIs,Payment Systems", "High", 40, "Critical"),
         (1, "Design Product Catalog UI", "Create responsive product catalog with filtering and search", "React,CSS,UX Design", "Medium", 24, "High"),
@@ -337,13 +353,14 @@ def seed_sample_data(cursor):
         (5, "Design Employee Self-Service Portal", "Create portal for leave requests and document access", "Angular,REST APIs,Authentication", "Low", 56, "Low"),
     ]
     
-    cursor.executemany('''
-        INSERT INTO tasks 
-        (project_id, task_name, description, skills_required, complexity, estimated_effort, priority)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', tasks)
+    for task in tasks:
+        execute_statement('''
+            INSERT INTO tasks 
+            (project_id, task_name, description, skills_required, complexity, estimated_effort, priority)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', list(task))
     
-    # Seed HistoricalAssignments
+    # HistoricalAssignments
     historical_assignments = [
         (1, 1, "Human", 38, 94, "Success"),
         (2, 12, "Human", 22, 91, "Success"),
@@ -357,13 +374,14 @@ def seed_sample_data(cursor):
         (5, 6, "Human", 54, 87, "Success"),
     ]
     
-    cursor.executemany('''
-        INSERT INTO historical_assignments 
-        (task_id, resource_id, resource_type, completion_time, quality_score, outcome)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', historical_assignments)
+    for ha in historical_assignments:
+        execute_statement('''
+            INSERT INTO historical_assignments 
+            (task_id, resource_id, resource_type, completion_time, quality_score, outcome)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', list(ha))
     
-    # Seed SLARules
+    # SLARules
     sla_rules = [
         ("Critical", 72, "Critical", "Immediate escalation to senior management"),
         ("High", 168, "High", "Escalate to team lead after 24 hours"),
@@ -371,12 +389,13 @@ def seed_sample_data(cursor):
         ("Low", 720, "Low", "Review in weekly planning meeting"),
     ]
     
-    cursor.executemany('''
-        INSERT INTO sla_rules (category, target_duration, priority, escalation_rule)
-        VALUES (?, ?, ?, ?)
-    ''', sla_rules)
+    for rule in sla_rules:
+        execute_statement('''
+            INSERT INTO sla_rules (category, target_duration, priority, escalation_rule)
+            VALUES (?, ?, ?, ?)
+        ''', list(rule))
     
-    # Seed CostModels
+    # CostModels
     cost_models = [
         ("Senior Developer", 80, 1.2),
         ("Mid-level Developer", 60, 1.0),
@@ -385,12 +404,13 @@ def seed_sample_data(cursor):
         ("Specialist", 90, 1.3),
     ]
     
-    cursor.executemany('''
-        INSERT INTO cost_models (resource_type, cost_per_hour, cost_weight)
-        VALUES (?, ?, ?)
-    ''', cost_models)
+    for cm in cost_models:
+        execute_statement('''
+            INSERT INTO cost_models (resource_type, cost_per_hour, cost_weight)
+            VALUES (?, ?, ?)
+        ''', list(cm))
     
-    # Seed ExpertAnalysis
+    # ExpertAnalysis
     expert_analysis = [
         ("Backend Development", "For high-complexity backend tasks, prioritize developers with 5+ years experience and proven track record in similar technologies. Consider AI agents for boilerplate code generation.", "Assign senior developers for critical path items", "Tech Lead - Alex Kumar"),
         ("Frontend Development", "Modern frontend frameworks like React and Angular require dedicated specialists. Avoid mixing backend and frontend assignments for better quality.", "UI/UX alignment is critical", "Frontend Architect - Maria Santos"),
@@ -401,10 +421,11 @@ def seed_sample_data(cursor):
         ("DevOps", "Infrastructure automation is critical. Prioritize engineers with CI/CD and cloud expertise.", "Automation over manual processes", "DevOps Manager - Tom Anderson"),
     ]
     
-    cursor.executemany('''
-        INSERT INTO expert_analysis (category, recommendation, notes, expert_name)
-        VALUES (?, ?, ?, ?)
-    ''', expert_analysis)
+    for ea in expert_analysis:
+        execute_statement('''
+            INSERT INTO expert_analysis (category, recommendation, notes, expert_name)
+            VALUES (?, ?, ?, ?)
+        ''', list(ea))
 
 if __name__ == "__main__":
     init_database()

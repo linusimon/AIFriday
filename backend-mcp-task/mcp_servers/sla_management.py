@@ -1,34 +1,24 @@
 """
 SLA Management MCP Server
 Provides tools for SLA requirements and breach risk prediction
+using generic SQLite MCP database operations.
 """
 from mcp_servers import MCPServer
-from database import get_db_connection
+from database import execute_query
 from typing import List, Dict, Optional
 
 # Create MCP server instance
 sla_server = MCPServer("sla", "SLA Management Server")
 
 def get_sla_requirements(category: Optional[str] = None) -> List[Dict]:
-    """
-    Get SLA requirements
-    
-    Args:
-        category: Filter by category (optional)
-    
-    Returns:
-        List of SLA rules
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
+    """Get SLA requirements using generic MCP query execution."""
     if category:
-        cursor.execute("""
+        return execute_query("""
             SELECT * FROM sla_rules
             WHERE category = ?
-        """, (category,))
+        """, [category])
     else:
-        cursor.execute("""
+        return execute_query("""
             SELECT * FROM sla_rules
             ORDER BY 
                 CASE priority
@@ -38,52 +28,28 @@ def get_sla_requirements(category: Optional[str] = None) -> List[Dict]:
                     WHEN 'Low' THEN 4
                 END
         """)
-    
-    rules = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return rules
 
 def predict_breach_risk(task_id: int, estimated_effort: float) -> Dict:
-    """
-    Predict SLA breach risk for a task
-    
-    Args:
-        task_id: Task ID
-        estimated_effort: Estimated effort in hours
-    
-    Returns:
-        Breach risk assessment
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Get task details
-    cursor.execute("""
+    """Predict SLA breach risk using generic MCP query execution."""
+    tasks = execute_query("""
         SELECT t.*, p.sla, p.priority
         FROM tasks t
         LEFT JOIN projects p ON t.project_id = p.project_id
         WHERE t.task_id = ?
-    """, (task_id,))
+    """, [task_id])
     
-    task = cursor.fetchone()
-    
-    if not task:
-        conn.close()
+    if not tasks:
         return {"error": "Task not found"}
     
-    task_dict = dict(task)
-    priority = task_dict['priority']
+    task_dict = tasks[0]
+    priority = task_dict.get('priority', 'Medium')
     
-    # Get SLA rule for this priority
-    cursor.execute("""
+    sla_rules = execute_query("""
         SELECT * FROM sla_rules
         WHERE priority = ?
-    """, (priority,))
+    """, [priority])
     
-    sla_rule = cursor.fetchone()
-    conn.close()
-    
-    if not sla_rule:
+    if not sla_rules:
         return {
             "task_id": task_id,
             "priority": priority,
@@ -92,11 +58,8 @@ def predict_breach_risk(task_id: int, estimated_effort: float) -> Dict:
             "message": "No SLA rule found for this priority"
         }
     
-    sla_dict = dict(sla_rule)
+    sla_dict = sla_rules[0]
     target_duration_hours = sla_dict['target_duration']
-    
-    # Calculate risk based on effort vs target duration
-    # Risk is High if effort > 80% of target, Medium if > 60%, Low otherwise
     effort_ratio = estimated_effort / target_duration_hours
     
     if effort_ratio >= 0.8:
@@ -121,54 +84,33 @@ def predict_breach_risk(task_id: int, estimated_effort: float) -> Dict:
     }
 
 def check_sla_compliance(task_id: int, actual_completion_time: float) -> Dict:
-    """
-    Check if a completed task met SLA requirements
-    
-    Args:
-        task_id: Task ID
-        actual_completion_time: Actual completion time in hours
-    
-    Returns:
-        SLA compliance status
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # Get task details
-    cursor.execute("""
+    """Check SLA compliance using generic MCP query execution."""
+    tasks = execute_query("""
         SELECT t.*, p.priority
         FROM tasks t
         LEFT JOIN projects p ON t.project_id = p.project_id
         WHERE t.task_id = ?
-    """, (task_id,))
+    """, [task_id])
     
-    task = cursor.fetchone()
-    
-    if not task:
-        conn.close()
+    if not tasks:
         return {"error": "Task not found"}
     
-    task_dict = dict(task)
-    priority = task_dict['priority']
+    task_dict = tasks[0]
+    priority = task_dict.get('priority', 'Medium')
     
-    # Get SLA rule
-    cursor.execute("""
+    sla_rules = execute_query("""
         SELECT * FROM sla_rules
         WHERE priority = ?
-    """, (priority,))
+    """, [priority])
     
-    sla_rule = cursor.fetchone()
-    conn.close()
-    
-    if not sla_rule:
+    if not sla_rules:
         return {
             "compliant": None,
             "message": "No SLA rule found"
         }
     
-    sla_dict = dict(sla_rule)
+    sla_dict = sla_rules[0]
     target_duration = sla_dict['target_duration']
-    
     compliant = actual_completion_time <= target_duration
     
     return {
