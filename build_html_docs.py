@@ -91,7 +91,7 @@ def convert_md_to_html(md_path, html_path, title):
     print(f"Generated HTML: {html_path}")
 
 if __name__ == '__main__':
-    base_dir = r"C:\Source\AIFriday"
+    base_dir = os.path.dirname(os.path.abspath(__file__))
     
     docs = [
         (os.path.join(base_dir, "skills", "tcs-hackathon-blueprint", "SKILL.md"), os.path.join(base_dir, "skills", "tcs-hackathon-blueprint", "SKILL.html"), "TCS Hackathon Master Blueprint Skill"),
@@ -101,3 +101,4 @@ if __name__ == '__main__':
 
     for md_p, html_p, title in docs:
         convert_md_to_html(md_p, html_p, title)
+
