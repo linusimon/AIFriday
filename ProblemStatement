@@ -1,0 +1,8 @@
+Al Friday Season 2- Qualifiers
+Al-Driven Infrastructure Capacity Planning Advisor
+PROBLEM STATEMENT
+IT infrastructure teams face challenges in forecasting capacity needs due to dynamic workloads and limited visibility into usage trends. Manual capacity planning is error-prone, leading to over-provisioning or resource shortages impacting cost and performance. Existing tools provide raw metrics but lack Al-powered analysis and actionable recommendations. This affects infrastructure reliability, budget optimization, and scalability.
+Data Considerations:
+Historical resource utilization metrics (CPU, memory, storage) from monitoring tools in JSON or CSV. Data volume covering multiple months. Preprocessing includes time-series normalization and anomaly detection. Privacy applies to system identifiers. Synthetic metrics can be generated. Consider using synthetic or anonymized data where appropriate. Ensure data quality and relevance to the problem context.
+SOLUTION EXPECTATIONS
+An interactive web tool that ingests usage data and provides Al-generated capacity forecasts, risk assessments, and optimization recommendations. Features include data visualization, scenario modeling, and API integration. Success measured by 80% forecast accuracy, 20% cost savings in demo scenarios, and positive user feedback. Demo shows forecasting and recommendation generation. Feel free to explore creative solutions that align with the problem context and objectives.
